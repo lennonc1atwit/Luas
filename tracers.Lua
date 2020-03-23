@@ -9,8 +9,12 @@
 local ref = gui.Reference("Visuals", "World", "Extra");
 local boxesCheckbox = gui.Checkbox(ref, "lua_boxes", "Tracer Boxes", true);
 local tracerCheckbox = gui.Checkbox(ref, "lua_tracer", "Tracers", true);
+
 local boxesColor = gui.ColorPicker(boxesCheckbox, "lua_boxes_color", "", 255, 0, 0, 255);
 local tracerColor = gui.ColorPicker(tracerCheckbox, "lua_tracer_color", "", 255, 255, 0, 255);
+
+local tracerDuration = gui.Slider(ref, "lua_tracer_duration", "Tracer Life Span", 1, 1, 10);
+local tracerFadeDuration = gui.Slider(ref, "lua_tracer_fade_duration", "Tracer Fade Time", 1, 1, 10);
 
 local hitCount = 0;
 local tempHitCount = 0;
@@ -24,9 +28,7 @@ hitData.hitTime = {};
 hitData.lifeSpan = {};
 
 --change these to liking--
-local cubeSize = 2;       -- bullet impact size
-local tracerLifeSpan = 2; -- how long tracer stays onscreen before fading
-local tracerFadeTime = 2; -- how long it takes tracer to fade after lifespan is reached
+local cubeSize = 2; -- bullet impact size
 
 local function drawCubeFromCenter(size, center, r, g, b, a)
 	local point1x, point1y = client.WorldToScreen(Vector3(center.x - size, center.y - size, center.z - size));
@@ -101,7 +103,7 @@ local function hDraw()
 			
                 local lifeSpan = globals.CurTime() - hitData.hitTime[index];
 				
-                if (lifeSpan > tracerLifeSpan + tracerFadeTime) then
+                if (lifeSpan > tracerDuration:GetValue() + tracerFadeDuration:GetValue()) then
 					table.remove(hitData.hitPos, index);
 					table.remove(hitData.eyePos, index);
 					table.remove(hitData.hitTime, index);
@@ -114,9 +116,9 @@ local function hDraw()
 				
                     local fadeAlpha = 255;
 					
-                    if (lifeSpan > tracerLifeSpan) then
+                    if (lifeSpan > tracerDuration:GetValue()) then
 						local currLifeSpan = lifeSpan - hitData.lifeSpan[index]
-						fadeAlpha =  map(currLifeSpan, tracerFadeTime, 0, 0, 255);
+						fadeAlpha =  map(currLifeSpan, tracerFadeDuration:GetValue(), 0, 0, 255);
                     else
                         table.insert(hitData.lifeSpan, index, lifeSpan)
                     end
