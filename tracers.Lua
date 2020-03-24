@@ -1,6 +1,6 @@
 -- Local tracer Lua by Scape
 
--- Thanks to Clipper for help the fixing flcikering
+-- Thanks to Clipper for help fixing the flcikering
 --			 Bean07 for discovering a bug with localPlayer
 --			 Chicken4676 for a w2s ductTape fix
 
