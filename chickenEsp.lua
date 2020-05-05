@@ -4,17 +4,17 @@
 -- Change max model size to your liking (100 is stupid big)
 -- Feel free to use bounding box and color converter functions in your code
 -- Sadly getMins and getMaxs doesnt account for model size so boxes will not scale
+local VIS_CHIK = gui.Reference('VISUALS')
+local chicktab = gui.Tab(VIS_CHIK, "chicktab.tab", "Chicken ESP")
 
 local fontSize = 12;
 local font = draw.CreateFont("Consolas", fontSize);
 -- Gui Setup
 local menuY = 368;
 local menuX = 328;
-gui.Groupbox(gui.Reference("visuals", "other"),"Chicken Esp", menuX, menuY, 296, 500);
-gui.Groupbox(gui.Reference("visuals", "other"),"Chicken Model", menuX, menuY + 226, 296, 500);
 
 -- Esp Gui
-local espRef = gui.Reference("visuals", "other", "Chicken Esp");
+local espRef = gui.Groupbox(chicktab, 'Chicken ESP', 305, 5, 296, 500)
 
 local chickenBox = gui.Checkbox(espRef, "chicken_box", "Box", false);
 local chickenBoxColor = gui.ColorPicker(chickenBox, "chicken_box_color", "Chicken box color", 255, 255, 255, 255);
@@ -24,21 +24,42 @@ local chickenSkeleton = gui.Checkbox(espRef, "chicken_skeleton", "Skeleton", fal
 local chickenSkeletonColor = gui.ColorPicker(chickenSkeleton, "chicken_skeleton_color", "Chicken skeleton color", 255, 255, 255, 255);
 chickenSkeleton:SetDescription("Draw chicken skeleton");
 
-local chickenLeader = gui.Checkbox(espRef, "chicken_leader", "Leader's name",      false);
+local chickenLeader = gui.Checkbox(espRef, "chicken_leader", "Leader's Name",      false);
 local chickenLeaderColor = gui.ColorPicker(chickenLeader, "chicken_leader_color", "Chicken name color", 255, 255, 255, 255);
-chickenLeader:SetDescription("Draw leaders name");
+chickenLeader:SetDescription("Draw leader's name");
 -- Model Gui
-local modelRef = gui.Reference("visuals", "other", "Chicken Model");
+local modelRef = gui.Groupbox(chicktab, 'Chicken Model', 5, 5, 296, 500)
 
-local chickenChams = gui.Checkbox(modelRef, "chicken_chams", "Chicken color", false);
-local chickenColor = gui.ColorPicker(chickenChams, "chicken_color", "Chicken color", 255, 255, 255, 255);
-chickenChams:SetDescription("Change color of model");
+local chickenColor = gui.Combobox(modelRef, 'chickenColor', 'Chicken Color','Off','Solid', 'Rainbow')
+local chickenColorSolid = gui.ColorPicker(modelRef, "chickenColorSolid", "Chicken Color", 255, 255, 255, 255);
+local chickenRainbowSpeed = gui.Slider(modelRef, 'chickenRainbowSpeed', 'Chicken Rainbow Speed', 1.0, 0.25, 4.0,.01)
+chickenColor:SetDescription("Change color of model");
 
 local chickenModel = gui.Combobox(modelRef, 'chicken_model', "Chicken Theme", 'Default Chicken', 'Party Chicken', 'Ghost Chicken', 'Festive Chicken', 'Easter Chicken', 'Jack-o-Chicken');
 chickenModel:SetDescription("Change chicken model");
 
-local chickenScale = gui.Slider(modelRef, "chicken_scale", "Chicken Scale", 1, 1, 10); -- Highest ive gone is 100 and things get ugly
-chickenModel:SetDescription("Change chicken model");
+local chickenSkin = gui.Combobox(modelRef, 'lua_ChickenSkin', 'Chicken Skin','Default', 'Other')
+chickenSkin:SetDescription("Change chicken skin");
+
+local chickenScale = gui.Slider(modelRef, "chicken_scale", "Chicken Scale", 1.0, 0.25, 10.0,.01); -- Highest ive gone is 100 and things get ugly
+chickenModel:SetDescription("Change chicken scale");
+
+local chickenAnimation = gui.Combobox(modelRef, 'chickenAnimation', 'Chicken Animation','Default', 'Anti-Aim', 'Bhop', 'Come at me bro')
+chickenAnimation:SetDescription("Change chicken animation");
+
+local chickenPartyMode = gui.Checkbox(modelRef, 'chickenPartyMode', 'Party Mode', false)
+chickenPartyMode:SetDescription("Enable sv_partymode 1");
+
+
+--Rainbox effect
+local function Rainbow()
+	local speed = chickenRainbowSpeed:GetValue()
+	local r = math.floor(math.sin(globals.RealTime() * speed) * 127 + 128)
+	local g = math.floor(math.sin(globals.RealTime() * speed + 2) * 127 + 128)
+	local b = math.floor(math.sin(globals.RealTime() * speed + 4) * 127 + 128)
+	return r, g, b
+end
+
 --Color converter
 local function rgbToHex(rgb)
 	local hexCode = '0x'
@@ -64,6 +85,7 @@ local function rgbToHex(rgb)
 
 	return hexCode;
 end
+
 -- Box esp (p1 through p8 are points for 3d box)
 local function getBoundingBox(entity)
 	local origin = entity:GetAbsOrigin();
@@ -110,6 +132,7 @@ local function getBoundingBox(entity)
 
 	return left, top, right, bottom;
 end
+
 -- Bone esp
 local function ChickenBoneESP(entity)
     local chickenBoneConnections = {{37, 35}, {35, 32}, {32, 20}, {20, 0}, {0, 18}, {18, 19}, {32, 28}, {28, 29}, {29, 31}, {32, 23}, {23, 24}, {24, 26}, {0, 1}, {1, 4}, {4, 6}, {6, 8}, {0, 9}, {9, 12}, {12, 16}, {16, 15}}    
@@ -122,9 +145,12 @@ local function ChickenBoneESP(entity)
         end
     end
 end
+
 -- Esp and model main
 local function hDraw()
 	local chickens = entities.FindByClass("CChicken");
+	local enable_party = chickenPartyMode:GetValue() and 1 or 0
+	local party_mode = client.GetConVar('sv_party_mode')
 	
 	for i = 1, # chickens do
 		local chicken = chickens[i];
@@ -133,7 +159,9 @@ local function hDraw()
 		local model = chicken:GetProp("m_nBody");
 		local color = chicken:GetProp('m_clrRender');
 		local scale = chicken:GetProp('m_flModelScale');
-		
+		local m_nSkin = chicken:GetProp('m_nSkin')
+		local m_nSequence = chicken:GetProp('m_nSequence')
+
 		-- Box esp
 		local left, top, right, bottom = getBoundingBox(chicken);
 		if chickenBox:GetValue() then
@@ -187,18 +215,53 @@ local function hDraw()
 			chicken:SetProp('m_nBody', chickenModel:GetValue())
         end
 		
-		-- Chams
-		if chickenChams:GetValue() then
-			local r, g, b, a = chickenColor:GetValue();
-			local chickenHex = rgbToHex({b,g,r});
-			
-			if color ~= chickenHex then
-				chicken:SetProp('m_clrRender', chickenHex);
+		--Skin changer
+			if m_nSkin ~= chicken_skin then
+				chicken:SetProp('m_nSkin', chicken_skin)
 			end
-		else
+		
+		--Animation
+			if chickenAnimation:GetValue() == 0 then
+				elseif chickenAnimation:GetValue() == 1 then
+					if m_nSequence ~= -2 then
+						chicken:SetProp('m_nSequence', -2)
+					end
+				elseif chickenAnimation:GetValue() == 2 then
+					if m_nSequence ~= 9 then
+						chicken:SetProp('m_nSequence', 9)
+					end
+				elseif chickenAnimation:GetValue() == 3 then
+					if m_nSequence ~= 7 then
+						chicken:SetProp('m_nSequence', 7)
+					end
+			end		
+		
+		-- Chams
+		if chickenColor:GetValue() == 0 then
+			chickenColorSolid:SetInvisible(true)
+			chickenRainbowSpeed:SetInvisible(true)		
 			if color ~= white then
 				chicken:SetProp('m_clrRender', 0xFFFFFF);
 			end
+
+			elseif 	 chickenColor:GetValue() == 1 then
+			chickenColorSolid:SetInvisible(false)
+			chickenRainbowSpeed:SetInvisible(true)		
+			local r, g, b, a = chickenColorSolid:GetValue();
+			local chickenHex = rgbToHex({b,g,r});
+			if color ~= chickenHex then
+				chicken:SetProp('m_clrRender', chickenHex);
+			end
+			
+			elseif 	 chickenColor:GetValue() == 2 then
+			chickenColorSolid:SetInvisible(true)
+			chickenRainbowSpeed:SetInvisible(false)		
+			local chickenHex = rgbToHex({Rainbow()});
+			if color ~= chickenHex then
+				chicken:SetProp('m_clrRender', chickenHex);
+			end
+
+		else
 		end
 		
 		-- Scale changer
@@ -206,6 +269,10 @@ local function hDraw()
 			chicken:SetProp('m_flModelScale', chickenScale:GetValue())
         end
 	end
-end
+	
+	if party_mode ~= enable_party then
+		client.SetConVar('sv_party_mode', enable_party, true)
+	end
 
+end
 callbacks.Register("Draw", hDraw);
