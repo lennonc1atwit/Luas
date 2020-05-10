@@ -1,4 +1,4 @@
--- Hit Effects by Scape#4313
+
 -- Gui Setup
 local ref1 = gui.Reference("Visuals", "World", "Extra");
 local ref2 = gui.Reference("Visuals", "World", "Extra", "Hit Effects");
@@ -137,20 +137,27 @@ local function hFireGameEvent(event)
 
 	if event:GetName() == "player_hurt" then
 		local attacker = entities.GetByUserID(event:GetInt("attacker"));
+		local victim = entities.GetByUserID(event:GetInt("userid"));
 		
-		if attacker:GetIndex() == localPlayer:GetIndex() then
-			local victim = entities.GetByUserID(event:GetInt("userid"));
-			local hitGroupVec = victim:GetHitboxPosition(hitGroupToHitBox[event:GetInt("hitgroup") + 1]);
+		if attacker:GetIndex() == localPlayer:GetIndex() and attacker:GetIndex() ~= victim:GetIndex() then
+			local hitGroupInt = event:GetInt("hitgroup") + 1;
+			local hitGroupVec = victim:GetHitboxPosition(hitGroupToHitBox[hitGroupInt]);
 			local impactIndex = getClosestImpact(hitGroupVec);
-			local hitPos = impacts[impactIndex];
-			
+			local hitPos;
+
+			if hitGroupInt == 1 then
+				hitPos = hitGroupVec;
+			else
+				hitPos = impacts[impactIndex];
+			end
+
 			local hitBoxVecs = {};
 			for index = 0, 19, 1 do
 				local pos = victim:GetHitboxPosition(index);
 				table.insert(hitBoxVecs, pos);
 			end
 			
-			local newhit = Hit:New(event:GetInt("dmg_health"), event:GetInt("hitgroup") + 1, hitPos, hitBoxVecs);
+			local newhit = Hit:New(event:GetInt("dmg_health"), hitGroupInt, hitPos, hitBoxVecs);
 			
 			table.insert(hits, newhit);
 			table.remove(impacts, impactIndex);
