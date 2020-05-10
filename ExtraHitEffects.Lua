@@ -14,7 +14,7 @@ local dammageClr = gui.ColorPicker(ref1, "dmg.clr", "Dammage Color", 255, 255, 2
 local hitgroupClr = gui.ColorPicker(ref1, "hitgroup.clr", "Hitgroup Color", 255, 255, 255, 255);
 local hitmarkerClr = gui.ColorPicker(ref1, "hitmarker.clr", "Hitmarker Color", 255, 255, 255, 255);
 local solidTime = gui.Slider(ref1, "solidtime", "Duration", 3, 0, 10, .1);
-local fadeTime = gui.Slider(ref1, "fadetime", "Fade Duration", 2, 1, 10, .1);
+local fadeTime = gui.Slider(ref1, "fadetime", "Fade Duration", 2, 0, 10, .1);
 
 local soundEffect = gui.Checkbox(multibox, "hiteffects.sound", "Sound", false);
 local skeletonEffect = gui.Checkbox(multibox, "hiteffects.skeleton", "Skeleton", false);
@@ -39,7 +39,7 @@ local markerGap = 2;
 local dotSize = 6;
 
 local fontSize = 16;
-local font = draw.CreateFont("Consolas", fontSize);
+local font = draw.CreateFont("Tahoma", fontSize, 700, {0x200})
 --- Hit class
 local Hit = {
     dammage = 0,
@@ -195,21 +195,31 @@ local function hDraw()
 			
 			local hitVec = Vector2:New(client.WorldToScreen(hit.pos));
 			if hitVec.x and hitVec.y then
-				alpha =  math.floor(map(math.max(timeOnScreen - solidTime:GetValue(), 0), fadeTime:GetValue(), 0, 0, 255));
-			
+				if fadeTime:GetValue() ~= 0 then
+					alpha =  math.floor(map(math.max(timeOnScreen - solidTime:GetValue(), 0), fadeTime:GetValue(), 0, 0, 255));
+				end
 				-- Dammage number
 				if dmgEffect:GetValue() then
 					local r, g, b, a = dammageClr:GetValue();
 					draw.Color(r, g, b, alpha);
 					
-					draw.Text(hitVec.x + fontSize, hitVec.y - fontSize/2, hit.dammage);
+					if alpha == 255 then
+						draw.TextShadow(hitVec.x + fontSize, hitVec.y, hit.dammage);
+					else
+						draw.Text(hitVec.x + fontSize, hitVec.y, hit.dammage);
+					end
 				end
 				-- Hitgroup text
 				if hitgroupEffect:GetValue() then
 					local r, g, b, a = hitgroupClr:GetValue();
 					draw.Color(r, g, b, alpha);
+					local w, h = draw.GetTextSize("hitGroupText[hit.hitgroup]");
 					
-					draw.Text(hitVec.x + fontSize, hitVec.y + fontSize/2 - 4, hitGroupText[hit.hitgroup]);
+					if alpha == 255 then
+						draw.TextShadow(hitVec.x + fontSize, hitVec.y + h + 2, hitGroupText[hit.hitgroup]);
+					else
+						draw.Text(hitVec.x + fontSize, hitVec.y + h + 2, hitGroupText[hit.hitgroup]);
+					end
 				end
 				-- Hitmarker
 				if hitMarkerType:GetValue() ~= 0 then
