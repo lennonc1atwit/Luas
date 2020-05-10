@@ -1,4 +1,4 @@
-
+-- Hit Effects by Scape#4313
 -- Gui Setup
 local ref1 = gui.Reference("Visuals", "World", "Extra");
 local ref2 = gui.Reference("Visuals", "World", "Extra", "Hit Effects");
