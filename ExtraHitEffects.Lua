@@ -10,28 +10,31 @@ ref4:SetValue(false);
 local multibox = gui.Multibox(ref1, "Hit Effects");
 
 local hitMarkerType = gui.Combobox(ref1, "hitmarkertype", "Hitmarker", "Off", "Cube", "Cross", "Dot");
-local dammageClr = gui.ColorPicker(ref1, "dmg.clr", "Dammage Color", 255, 255, 255, 255);
-local hitgroupClr = gui.ColorPicker(ref1, "hitgroup.clr", "Hitgroup Color", 255, 255, 255, 255);
-local hitmarkerClr = gui.ColorPicker(ref1, "hitmarker.clr", "Hitmarker Color", 255, 255, 255, 255);
+local dammageClr = gui.ColorPicker(ref1, "damage.clr", "Damage Color", 192, 108, 129, 255);
+local hitgroupClr = gui.ColorPicker(ref1, "hitgroup.clr", "Hitgroup Color", 252, 211, 3, 255);
+local hitmarkerClr = gui.ColorPicker(ref1, "hitmarker.clr", "Hitmarker Color", 67, 144, 219, 255);
 local solidTime = gui.Slider(ref1, "solidtime", "Duration", 3, 0, 10, .1);
 local fadeTime = gui.Slider(ref1, "fadetime", "Fade Duration", 2, 0, 10, .1);
 
-local soundEffect = gui.Checkbox(multibox, "hiteffects.sound", "Sound", false);
-local skeletonEffect = gui.Checkbox(multibox, "hiteffects.skeleton", "Skeleton", false);
-local dmgEffect = gui.Checkbox(multibox, "hiteffects.dammage", "Dammage", false);
-local hitgroupEffect = gui.Checkbox(multibox, "hiteffects.hitgroup", "Hit Group", false);	
+local soundEffect = gui.Checkbox(multibox, "hiteffects.sound", "Sound", true);
+local skeletonEffect = gui.Checkbox(multibox, "hiteffects.skeleton", "Skeleton", true);
+local damageEffect = gui.Checkbox(multibox, "hiteffects.damage", "Damage", true);
+local hitgroupEffect = gui.Checkbox(multibox, "hiteffects.hitgroup", "Hit Group", true);	
 
 multibox:SetDescription("Effects when hitting an enemy");
 hitMarkerType:SetDescription("Hitmarker style");
 solidTime:SetDescription("Seconds before fading");
 fadeTime:SetDescription("Seconds it takes to fade");
 -- Classes and global vars
-local hitGroupText = {"GENERIC", "HEAD", "CHEST", "STOMACH", "LEFT ARM", "RIGHTARM", "LEFTLEG", "RIGHTLEG", "NECK", "GEAR"};
-local hitGroupToHitBox = {2, 0, 4, 2, 13, 14, 7, 8, 1};
+local hitGroupText = {"GENERIC", "HEAD", "CHEST", "STOMACH", "LEFT ARM", "RIGHT ARM", "LEFT LEG", "RIGHT LEG", "NECK"};
+local hitGroupStandards = {"HITGROUP_GENERIC", "HITGROUP_HEAD", "HITGROUP_CHEST", "HITGROUP_STOMACH", "HITGROUP_LEFTARM", "HITGROUP_RIGHTARM", "HITGROUP_LEFTLEG", "HITGROUP_RIGHTLEG", "HITGROUP_GEAR"};
 local playerBoneConnections = {{1, 2}, {2,7}, {7, 6}, {6, 5}, {5, 4}, {4, 3}, {3, 9}, {3, 8}, {9, 11}, {8, 10}, {11, 13}, {10, 12}, {7, 18}, {18, 19}, {19, 15}, {7, 16}, {16, 17}, {17, 14}};
 
 local hits = {};
 local impacts = {};
+local savedPlayers = {};
+
+local backtrackActive = false;
  -- these dont warrant sliders imo but change if you want
 local cubeSize = 2;
 local crossSize = 8;
@@ -99,6 +102,34 @@ local function getClosestImpact(vec3)
 	return bestIndex;
 end
 
+local function getClosestBackTrack(vec3, playerIndex)
+	local bestVecs;
+	local bestIndex;
+	local bestDistance = math.huge;
+	
+	for index = 1, #savedPlayers[playerIndex] do
+		if savedPlayers[playerIndex][index] then
+			local hitboxVecs = savedPlayers[playerIndex][index][1];
+			
+			for hitboxIndex = 0, 20, 1 do
+				local hitboxPos = hitboxVecs[hitboxIndex];
+				if hitboxPos then
+					local delta = (hitboxPos - vec3);
+					local distance = delta:Length()
+					
+					if distance < bestDistance then
+						bestDistance = distance;
+						bestIndex = index;
+					end
+				end
+			end
+		end
+	end
+	bestVecs = savedPlayers[playerIndex][bestIndex][1];
+
+	return bestVecs;
+end
+
 local function drawCubeFromCenter(size, vec)
 	local connections = {{1, 2}, {1, 3}, {1, 5}, {8, 7}, {8, 6}, {8, 4}, {6, 3}, {4, 3}, {4, 2}, {2, 7}, {7, 5}, {6, 5}};
 	local points = {};
@@ -141,20 +172,24 @@ local function hFireGameEvent(event)
 		
 		if attacker:GetIndex() == localPlayer:GetIndex() and attacker:GetIndex() ~= victim:GetIndex() then
 			local hitGroupInt = event:GetInt("hitgroup") + 1;
-			local hitGroupVec = victim:GetHitboxPosition(hitGroupToHitBox[hitGroupInt]);
-			local impactIndex = getClosestImpact(hitGroupVec);
+			local hitBoxVec = victim:GetHitboxPosition(hitGroupStandards[hitGroupInt]);
+			local impactIndex = getClosestImpact(hitBoxVec);
 			local hitPos;
 
 			if hitGroupInt == 1 then
-				hitPos = hitGroupVec;
+				hitPos = hitBoxVec;
 			else
 				hitPos = impacts[impactIndex];
 			end
 
 			local hitBoxVecs = {};
-			for index = 0, 19, 1 do
-				local pos = victim:GetHitboxPosition(index);
-				table.insert(hitBoxVecs, pos);
+			if backtrackActive then 
+				hitBoxVecs = getClosestBackTrack(hitPos, victim:GetIndex());
+			else
+				for index = 0, 19, 1 do
+					local pos = victim:GetHitboxPosition(index);
+					table.insert(hitBoxVecs, pos);
+				end
 			end
 			
 			local newhit = Hit:New(event:GetInt("dmg_health"), hitGroupInt, hitPos, hitBoxVecs);
@@ -170,10 +205,13 @@ local function hFireGameEvent(event)
 			
 			table.insert(impacts, impactPos);
 		end
+	elseif event:GetName() == "round_start" or event:GetName() == "round_prestart" then
+		savedPlayers = {};
 	end
 end
 
-local function hDraw()
+local function hDraw()	
+	-- Effect Draw Code
 	draw.SetFont(font);
 	local alpha = 255;
 	
@@ -199,7 +237,7 @@ local function hDraw()
 					alpha =  math.floor(map(math.max(timeOnScreen - solidTime:GetValue(), 0), fadeTime:GetValue(), 0, 0, 255));
 				end
 				-- Dammage number
-				if dmgEffect:GetValue() then
+				if damageEffect:GetValue() then
 					local r, g, b, a = dammageClr:GetValue();
 					draw.Color(r, g, b, alpha);
 					
@@ -257,7 +295,60 @@ local function hDraw()
 	impacts = {};
 end
 
+local function hCreateMove(cmd)
+	-- Backtrack fix
+	local localPlayer = entities.GetLocalPlayer();
+	local players = entities.FindByClass("CCSPlayer");
+	local fakeLatency = 0;
+	local backtrackFactor = 0;
+	
+	if gui.GetValue("rbot.master") and gui.GetValue("rbot.accuracy.posadj.backtrack") then
+		backtrackFactor = 0.4;
+		backtrackActive = true;
+	elseif gui.GetValue("lbot.master") and gui.GetValue("lbot.posadj.backtrack") then
+		backtrackFactor = gui.GetValue("lbot.extra.backtrack") / 1000;
+		backtrackActive = true;
+	end
+	
+	if gui.GetValue("misc.master") and gui.GetValue("misc.fakelatency.enable") then
+		fakeLatency = gui.GetValue("misc.fakelatency.amount");
+	end
+	
+	for i = 1, #players do
+		local player = players[i];
+		local playerIndex = player:GetIndex();
+		
+		if player:GetTeamNumber() ~= localPlayer:GetTeamNumber() and player:IsAlive() then
+			local playerHitBoxVecs = {};
+			for index = 0, 19, 1 do
+				local pos = player:GetHitboxPosition(index);
+				table.insert(playerHitBoxVecs, pos);
+			end
+			
+			if not savedPlayers[playerIndex] then
+				savedPlayers[playerIndex] = {};
+			end
+			
+			table.insert(savedPlayers[playerIndex], {playerHitBoxVecs, globals.CurTime()});
+			
+			for index = 1, #savedPlayers[playerIndex] do
+				if savedPlayers[playerIndex][index] then
+					local savedData = savedPlayers[playerIndex][index][2];
+					
+					if savedData + backtrackFactor + fakeLatency < globals.CurTime() then
+						table.remove(savedPlayers[playerIndex], index);
+					end
+				end
+			end
+		end
+	end
+end
+
 client.AllowListener("bullet_impact");
 client.AllowListener("player_hurt");
+client.AllowListener("round_prestart");
+client.AllowListener("round_start");
+
+callbacks.Register("CreateMove", hCreateMove);
 callbacks.Register("FireGameEvent", hFireGameEvent);
 callbacks.Register("Draw", hDraw);
