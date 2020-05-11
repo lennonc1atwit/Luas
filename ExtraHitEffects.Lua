@@ -10,16 +10,16 @@ ref4:SetValue(false);
 local multibox = gui.Multibox(ref1, "Hit Effects");
 
 local hitMarkerType = gui.Combobox(ref1, "hitmarkertype", "Hitmarker", "Off", "Cube", "Cross", "Dot");
-local dammageClr = gui.ColorPicker(ref1, "damage.clr", "Damage Color", 192, 108, 129, 255);
-local hitgroupClr = gui.ColorPicker(ref1, "hitgroup.clr", "Hitgroup Color", 252, 211, 3, 255);
-local hitmarkerClr = gui.ColorPicker(ref1, "hitmarker.clr", "Hitmarker Color", 67, 144, 219, 255);
+local dammageClr = gui.ColorPicker(ref1, "damage.clr", "Damage Color", 255, 255, 255, 255);
+local hitgroupClr = gui.ColorPicker(ref1, "hitgroup.clr", "Hitgroup Color", 255, 255, 255, 255);
+local hitmarkerClr = gui.ColorPicker(ref1, "hitmarker.clr", "Hitmarker Color", 255, 255, 255, 255);
 local solidTime = gui.Slider(ref1, "solidtime", "Duration", 3, 0, 10, .1);
 local fadeTime = gui.Slider(ref1, "fadetime", "Fade Duration", 2, 0, 10, .1);
 
-local soundEffect = gui.Checkbox(multibox, "hiteffects.sound", "Sound", true);
-local skeletonEffect = gui.Checkbox(multibox, "hiteffects.skeleton", "Skeleton", true);
-local damageEffect = gui.Checkbox(multibox, "hiteffects.damage", "Damage", true);
-local hitgroupEffect = gui.Checkbox(multibox, "hiteffects.hitgroup", "Hit Group", true);	
+local soundEffect = gui.Checkbox(multibox, "hiteffects.sound", "Sound", false);
+local skeletonEffect = gui.Checkbox(multibox, "hiteffects.skeleton", "Skeleton", false);
+local damageEffect = gui.Checkbox(multibox, "hiteffects.damage", "Damage", false);
+local hitgroupEffect = gui.Checkbox(multibox, "hiteffects.hitgroup", "Hit Group", false);	
 
 multibox:SetDescription("Effects when hitting an enemy");
 hitMarkerType:SetDescription("Hitmarker style");
