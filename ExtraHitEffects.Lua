@@ -102,7 +102,7 @@ local function getClosestImpact(vec3)
 	return bestIndex;
 end
 
-local function getClosestBackTrack(vec3, playerIndex)
+local function getClosestBackTrack(vec3, playerIndex, hitgroup)
 	local bestVecs;
 	local bestIndex;
 	local bestDistance = math.huge;
@@ -111,16 +111,14 @@ local function getClosestBackTrack(vec3, playerIndex)
 		if savedPlayers[playerIndex][index] then
 			local hitboxVecs = savedPlayers[playerIndex][index][1];
 			
-			for hitboxIndex = 0, 20, 1 do
-				local hitboxPos = hitboxVecs[hitboxIndex];
-				if hitboxPos then
-					local delta = (hitboxPos - vec3);
-					local distance = delta:Length()
+			local hitboxPos = hitboxVecs[hitgroup];
+			if hitboxPos then
+				local delta = (hitboxPos - vec3);
+				local distance = delta:Length()
 					
-					if distance < bestDistance then
-						bestDistance = distance;
-						bestIndex = index;
-					end
+				if distance < bestDistance then
+					bestDistance = distance;
+					bestIndex = index;
 				end
 			end
 		end
@@ -184,7 +182,7 @@ local function hFireGameEvent(event)
 
 			local hitBoxVecs = {};
 			if backtrackActive then 
-				hitBoxVecs = getClosestBackTrack(hitPos, victim:GetIndex());
+				hitBoxVecs = getClosestBackTrack(hitPos, victim:GetIndex(), hitGroupInt);
 			else
 				for index = 0, 19, 1 do
 					local pos = victim:GetHitboxPosition(index);
