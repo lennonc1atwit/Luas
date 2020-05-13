@@ -38,7 +38,7 @@ chickenColor:SetDescription("Change color of model");
 local chickenModel = gui.Combobox(modelRef, 'chicken_model', "Chicken Theme", 'Default Chicken', 'Party Chicken', 'Ghost Chicken', 'Festive Chicken', 'Easter Chicken', 'Jack-o-Chicken');
 chickenModel:SetDescription("Change chicken model");
 
-local chickenSkin = gui.Combobox(modelRef, 'lua_ChickenSkin', 'Chicken Skin','Default', 'Other')
+local chickenSkin = gui.Combobox(modelRef, 'chickenSkin', 'Chicken Skin','Default', 'Other')
 chickenSkin:SetDescription("Change chicken skin");
 
 local chickenScale = gui.Slider(modelRef, "chicken_scale", "Chicken Scale", 1.0, 0.25, 10.0,.01); -- Highest ive gone is 100 and things get ugly
