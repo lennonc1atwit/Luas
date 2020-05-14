@@ -24,7 +24,7 @@ local cubeSize = gui.Slider(optionGroupBox, "cube.size", "Cube Size", 2, .1, 10,
 local crossDynamic = gui.Checkbox(optionGroupBox, "cross.dynamic", "Dynamic Cross Size", false);
 local crossOutline = gui.Checkbox(optionGroupBox, "cross.outline", "Outline", true);
 local crossSize = gui.Slider(optionGroupBox, "cross.size", "Cross Size", 10, .1, 20, .1);
-local crossGapSize = gui.Slider(optionGroupBox, "cross.gapsize", "Cross Gap Size", 2, .1, 5, .1);
+local crossGapSize = gui.Slider(optionGroupBox, "cross.gapsize", "Cross Gap Size", 2, .1, 10, .1);
 local dotDynamic = gui.Checkbox(optionGroupBox, "dot.dynamic", "Dynamic Dot Size", false);
 local dotSize = gui.Slider(optionGroupBox, "dot.size", "Dot Size", 2, .1, 10, .1);
 local hitmarkerClr = gui.ColorPicker(optionGroupBox, "hitmarkerclr", "", 255, 255, 255, 255);
@@ -33,10 +33,10 @@ local dammageClr = gui.ColorPicker(optionGroupBox, "damageclr", "Damage Color", 
 local hitgroupClr = gui.ColorPicker(optionGroupBox, "hitgroupclr", "Hitgroup Color", 255, 255, 255, 255);
 local fontSize = gui.Slider(optionGroupBox, "fontsize", "Font Size", 16, 1, 30, 1);
 local fontName = gui.Editbox(optionGroupBox, "fontname", "Font Name"); 
+local fontCase = gui.Checkbox(optionGroupBox, "fontcase", "Upper Case", true);
 -- Debug options
 local debugMultibox = gui.Multibox(optionGroupBox, "Log Hits");
 local predictedHitboxDebug = gui.Checkbox(debugMultibox, "debug.hitbox", "Hitbox", false);
-local hitGroupNameDebug = gui.Checkbox(debugMultibox, "debug.hitgroup", "HitGroup", false);
 local predictedBacktrackDebug = gui.Checkbox(debugMultibox, "debug.backtrack", "Backtrack Index", false);
 local damageDebug = gui.Checkbox(debugMultibox, "debug.damage", "Damage", false);
 -- Gui descriptions
@@ -73,7 +73,8 @@ ref2:SetInvisible(true);
 ref4:SetValue(false);
 
 -- Classes and global vars
-local hitGroupText = {"GENERIC", "HEAD", "CHEST", "STOMACH", "LEFT ARM", "RIGHT ARM", "LEFT LEG", "RIGHT LEG", "NECK"};
+local hitGroupTextUpper = {"GENERIC", "HEAD", "CHEST", "STOMACH", "LEFT ARM", "RIGHT ARM", "LEFT LEG", "RIGHT LEG", "NECK"};
+local hitGroupTextlower = {"Generic", "Head", "Chest", "Stomach", "Left arm", "Right arm", "Left leg", "Right leg", "Neck"}
 local hitGroupStandards = {"HITGROUP_GENERIC", "HITGROUP_HEAD", "HITGROUP_CHEST", "HITGROUP_STOMACH", "HITGROUP_LEFTARM", "HITGROUP_RIGHTARM", "HITGROUP_LEFTLEG", "HITGROUP_RIGHTLEG", "HITGROUP_GEAR"};
 local playerBoneConnections = {{1, 2}, {2,7}, {7, 6}, {6, 5}, {5, 4}, {4, 3}, {3, 9}, {3, 8}, {9, 11}, {8, 10}, {11, 13}, {10, 12}, {7, 18}, {18, 19}, {19, 15}, {7, 16}, {16, 17}, {17, 14}};
 local conversion = {2, 0, 4, 2, 13, 14, 7, 8, 1};
@@ -216,13 +217,13 @@ local function drawCrossAtPoint(size, vec3, gap, alphaOutline)
 		local hitPoint = localEye + targetAngles:Forward() * -(vec3- localEye):Length();
 		local hitxy = Vector2:New(client.WorldToScreen(hitPoint));
 		
-		local rightOut = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * gap)).x;
-		local leftOut = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * -gap)).x;
-		local rightIn = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * (gap-size))).x;
-		local leftIn = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * -(gap-size))).x;
+		local rightOut = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * (size + gap))).x;
+		local leftOut = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * -(size + gap))).x;
+		local rightIn = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * gap)).x;
+		local leftIn = Vector2:New(client.WorldToScreen(hitPoint + targetAngles:Right() * -gap)).x;
 		
 		
-		if leftOut and rightOut and topOut and bottomOut then
+		if leftOut and rightOut and leftIn and rightIn then
 			newSize = leftOut - rightOut;
 			newGap = leftIn - rightIn;
 		end
@@ -232,7 +233,7 @@ local function drawCrossAtPoint(size, vec3, gap, alphaOutline)
 		
 	else
 		x, y = client.WorldToScreen(vec3)
-		newSize = size;
+		newSize = size + gap;
 		newGap = gap;
 	end
 	
@@ -319,9 +320,9 @@ local function guiDraw()
 		hitgroupClr:SetInvisible(true);
 		fontSize:SetInvisible(true);
 		fontName:SetInvisible(true);
+		fontCase:SetInvisible(true);
 		debugMultibox:SetInvisible(true);
 		predictedHitboxDebug:SetInvisible(true);
-		hitGroupNameDebug:SetInvisible(true);
 		predictedBacktrackDebug:SetInvisible(true);
 		damageDebug:SetInvisible(true);
 	elseif settingSelection == 1 then -- Hitmarker
@@ -345,8 +346,8 @@ local function guiDraw()
 			hitgroupClr:SetInvisible(true);
 			fontSize:SetInvisible(true);
 			fontName:SetInvisible(true);
+			fontCase:SetInvisible(true);
 			debugMultibox:SetInvisible(true);
-			predictedHitboxDebug:SetInvisible(true);
 		elseif hitmarkerSelection == 1 then -- Cube
 			solidTime:SetInvisible(true);
 			fadeTime:SetInvisible(true);
@@ -366,6 +367,7 @@ local function guiDraw()
 			hitgroupClr:SetInvisible(true);
 			fontSize:SetInvisible(true);
 			fontName:SetInvisible(true);
+			fontCase:SetInvisible(true);
 			debugMultibox:SetInvisible(true);
 		elseif hitmarkerSelection == 2 then -- Cross
 			solidTime:SetInvisible(true);
@@ -386,6 +388,7 @@ local function guiDraw()
 			hitgroupClr:SetInvisible(true);
 			fontSize:SetInvisible(true);
 			fontName:SetInvisible(true);
+			fontCase:SetInvisible(true);
 			debugMultibox:SetInvisible(true);
 		elseif hitmarkerSelection == 3 then -- Dot
 			solidTime:SetInvisible(true);
@@ -406,6 +409,7 @@ local function guiDraw()
 			hitgroupClr:SetInvisible(true);
 			fontSize:SetInvisible(true);
 			fontName:SetInvisible(true);
+			fontCase:SetInvisible(true);
 			debugMultibox:SetInvisible(true);
 		end
 	elseif settingSelection == 2 then -- Font
@@ -427,6 +431,7 @@ local function guiDraw()
 		hitgroupClr:SetInvisible(false);
 		fontSize:SetInvisible(false);
 		fontName:SetInvisible(false);
+		fontCase:SetInvisible(false);
 		debugMultibox:SetInvisible(true);
 	elseif settingSelection == 3 then -- Debug
 		solidTime:SetInvisible(true);
@@ -447,6 +452,7 @@ local function guiDraw()
 		hitgroupClr:SetInvisible(true);
 		fontSize:SetInvisible(true);
 		fontName:SetInvisible(true);
+		fontCase:SetInvisible(true);
 		debugMultibox:SetInvisible(false);
 	end
 end
@@ -486,22 +492,18 @@ local function hFireGameEvent(event)
 			table.insert(hits, newhit);
 			table.remove(impacts, impactIndex);
 			
-			if predictedBacktrackDebug:GetValue() or predictedHitboxDebug:GetValue() or damageDebug:GetValue() or hitGroupNameDebug:GetValue() then
-				print("--- Hit Information ---");
-				if predictedHitboxDebug:GetValue() then
-					print("Predicted Hitbox: "..conversion[hitGroupInt]);
+			if predictedBacktrackDebug:GetValue() or predictedHitboxDebug:GetValue() or damageDebug:GetValue() then
+				local message = "[Hit log] "
+				if damageDebug:GetValue() then
+					message = message..event:GetInt("dmg_health").." to "..victim:GetName().." in "..hitGroupStandards[hitGroupInt].. " ";
 				end
 				if predictedBacktrackDebug:GetValue() then
-					print("Predicted Hitbox: "..bestindex.."/"..#savedPlayers[victim:GetIndex()]);
+					message = message..bestIndex.."/"..#savedPlayers[victim:GetIndex()].." ";
 				end
-				if hitGroupNameDebug:GetValue() then
-					print(hitGroupStandards[hitGroupInt]);
+				if predictedHitboxDebug:GetValue() then
+					message = message..conversion[hitGroupInt];
 				end
-				if damageDebug:GetValue() then
-					print(event:GetInt("dmg_health").." damage");
-				end
-				print("-----------------------");
-				print(" ");
+				print(message);
 			end
 		end
 	elseif event:GetName() == "bullet_impact" then
@@ -590,9 +592,9 @@ local function hDraw()
 					draw.Color(r, g, b, alpha);
 						
 					if alpha == 255 then
-						draw.TextShadow(hitVec.x + fontSize:GetValue(), hitVec.y, hit.dammage);
+						draw.TextShadow(hitVec.x + fontSize:GetValue(), hitVec.y - fontSize:GetValue()/2, hit.dammage);
 						else
-						draw.Text(hitVec.x + fontSize:GetValue(), hitVec.y, hit.dammage);
+						draw.Text(hitVec.x + fontSize:GetValue(), hitVec.y - fontSize:GetValue()/2, hit.dammage);
 					end
 				end
 				
@@ -600,12 +602,18 @@ local function hDraw()
 				if hitgroupEffect:GetValue() then
 					local r, g, b, a = hitgroupClr:GetValue();
 					draw.Color(r, g, b, alpha);
-					local w, h = draw.GetTextSize("hitGroupText[hit.hitgroup]");
-						
+					local text = hitGroupTextUpper[hit.hitgroup];
+					
+					if not fontCase:GetValue() then 
+						text = hitGroupTextlower[hit.hitgroup];
+					end
+					
+					local w, h = draw.GetTextSize(text);
+					
 					if alpha == 255 then
-						draw.TextShadow(hitVec.x + fontSize:GetValue(), hitVec.y + h + 2, hitGroupText[hit.hitgroup]);
+						draw.TextShadow(hitVec.x + fontSize:GetValue(), hitVec.y + h/2, text);
 					else
-						draw.Text(hitVec.x + fontSize:GetValue(), hitVec.y + h + 2, hitGroupText[hit.hitgroup]);
+						draw.Text(hitVec.x + fontSize:GetValue(), hitVec.y + h/2, text);
 					end
 				end
 			end
