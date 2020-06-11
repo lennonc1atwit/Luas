@@ -5,6 +5,9 @@ local fontName = "tomah";
 local fontSize = 14;
 local fontweight = 550;
 
+local xOffset = 8;
+local yOffset = 5;
+
 local function clamp(var, lo, hi)
     if var > hi then
         return hi;
@@ -15,7 +18,7 @@ local function clamp(var, lo, hi)
     return var;
 end
 
-local function drawTextShadow(x, y, string, r, g, b, a)
+local function DrawTextShadow(x, y, string, r, g, b, a)
     draw.Color(0, 0, 0, a);
     draw.Text(x+1, y+1, string); 
     draw.Color(r, g, b, a);
@@ -23,7 +26,7 @@ local function drawTextShadow(x, y, string, r, g, b, a)
 end
 
 -- I dont really need a function for this tbh but its here
-function addToNotify(clr, msg, console)
+function AddToNotify(clr, msg, console)
     table.insert(notifyText, {clr = clr, text = msg, liferemaining = notifyTime});
 
     if console == true then
@@ -32,7 +35,7 @@ function addToNotify(clr, msg, console)
 end
 
 -- updates lifetime for the notifications
-function updateNotify()
+function UpdateNotify()
 	for i = #notifyText, 1, -1 do
 		
 		local notify = notifyText[i];
@@ -47,13 +50,13 @@ function updateNotify()
 end
 
 -- Drawing animation magic ripped straight from leaked source code :)
-function drawNotify()
+function DrawNotify()
     local drawFont = draw.CreateFont(fontName, fontSize, fontWeight);
     draw.SetFont(drawFont);
 
     -- Log base offsets
-    local x = 8;
-	local y = 5;
+    local x = xOffset;
+	local y = yOffset;
     
     -- Get font height
     local fontTall = fontSize;
@@ -78,7 +81,7 @@ function drawNotify()
 			clr.a = 255;
         end
 
-        drawTextShadow( x, y, notify.text, clr.r, clr.g, clr.b, clr.a);
+        DrawTextShadow( x, y, notify.text, clr.r, clr.g, clr.b, clr.a);
         
 		y = y + fontTall;
 	end
