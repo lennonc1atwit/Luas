@@ -40,7 +40,7 @@ local function hFireGameEvent(event)
             local clr = {r = r, b = b, g = g, a = a};
 
             local msg = string.format("-%s in %s from %s", eventDamage, hitGroups[eventHitGroup], attacker:GetName());
-            addToNotify(clr, msg, logConsole:GetValue());
+            AddToNotify(clr, msg, logConsole:GetValue());
         -- Damage logs
         elseif attacker and attacker:GetIndex() == localPlayer:GetIndex() and attacker:GetIndex() ~= victim:GetIndex() then
             local r, g, b, a = colorDamage:GetValue();
@@ -49,7 +49,7 @@ local function hFireGameEvent(event)
             local msg = string.format("-%s in %s to %s", eventDamage, hitGroups[eventHitGroup], victim:GetName());
 
             -- Add to mnessages list using API
-            addToNotify(clr, msg, logConsole:GetValue());
+            AddToNotify(clr, msg, logConsole:GetValue());
         end
         
     elseif eventName == "item_purchase" then
@@ -63,20 +63,18 @@ local function hFireGameEvent(event)
             local msg = string.format("%s bought %s", player:GetName(), weapon);
 
             -- Add to mnessages list using API
-            addToNotify(clr, msg, logConsole:GetValue());
+            AddToNotify(clr, msg, logConsole:GetValue());
         end
     end
 end
-
-local function hDraw()
-    -- Update notifications before drawing them using API
-    updateNotify();
-    drawNotify();
-end
-
 -- Listeners for event logs add your own if you want
 client.AllowListener("player_hurt");
 client.AllowListener("item_purchase");
 
 callbacks.Register("FireGameEvent", hFireGameEvent);
-callbacks.Register("Draw", hDraw);
+
+callbacks.Register("Draw", function()
+    -- Update notifications before drawing them using API
+    UpdateNotify();
+    DrawNotify();
+end);
