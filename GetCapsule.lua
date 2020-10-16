@@ -22,9 +22,6 @@ capsuleLineIndices = {
     4,	5,	6,	7,	8,	9,	10,	11,	12, 1
 }
 
-local guiTab = gui.Tab(gui.Reference("Misc"), "test", "Test")
-local scale = gui.Slider(guiTab, "test", "Scale", 50, 1, 100)
-
 -- rot is a table of vector3's we multiply vec by each coloumn in the matrix to rotate the vector
 local function VectorRotate(vec, rot)
     x = vec:Dot(Vector3(rot[1].x, rot[2].x, rot[3].x))
