@@ -37,7 +37,7 @@ end
 -- Create axis vectors based of a forward vector
 local function VectorVectors(forward)
     local right, up
-
+    
 	if math.abs(forward.x) < 0.000001 and math.abs(forward.y) < 0.000001 then
 		right = Vector3(0, 1, 0)	
         up = Vector3(-forward.z, 0, 0)
@@ -92,25 +92,3 @@ local function getCapsule(vStart, vEnd, flRadius)
 
     return v
 end
-
-callbacks.Register("Draw", function()
-
-    local vStart = entities.GetLocalPlayer():GetAbsOrigin()
-    local vEnd = Vector3(0,0,0)
-    local cap = getCapsule(vStart, vEnd, scale:GetValue())
-    
-    -- Draws the capsule
-    for i = 1, #capsuleLineIndices - 1 do
-        local i1, i2 = capsuleLineIndices[i], capsuleLineIndices[i+1]
-        local v1, v2 = cap[i1 + 1], cap[i2 + 1]
-
-        local x1, y1 = client.WorldToScreen(v1)
-        local x2, y2 = client.WorldToScreen(v2)
-        
-        draw.Color(255, 255, 255, 255)
-        if x1 and x2 and not(i1 == 0 and i2 == 61)then
-            draw.Line(x1, y1, x2, y2)
-            draw.FilledCircle(x1, y1)
-        end
-    end
-end)
