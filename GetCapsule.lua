@@ -11,7 +11,7 @@ local capsuleVertPositions = {
 	{ 0.44, -0.26, -0.87 },	{ 0.0, 0.0, -1.0 }
 }
 
-local capsuleLineIndices = {
+capsuleLineIndices = {
 	0,  4,	16,	28,	40,	52,	64,	73,	70,	58,	46,	34,	22,	10,		
     0,	0,	1,	13,	25,	37,	49,	61,	73,	67,	55,	43,	31,	19,	
     7,	0,	61,	62,	63,	64,	65,	66,	67,	68,	69,	70,	71,	72,				
@@ -37,7 +37,7 @@ end
 -- Create axis vectors based of a forward vector
 local function VectorVectors(forward)
     local right, up
-    
+
 	if math.abs(forward.x) < 0.000001 and math.abs(forward.y) < 0.000001 then
 		right = Vector3(0, 1, 0)	
         up = Vector3(-forward.z, 0, 0)
@@ -62,7 +62,7 @@ local function VectorMatrix(forward)
     return matrix
 end
 
-local function getCapsule(vStart, vEnd, flRadius)
+function getCapsule(vStart, vEnd, flRadius)
     local vCapNorm = (vStart - vEnd)
     vCapNorm:Normalize()
 
