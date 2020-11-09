@@ -1,4 +1,6 @@
 -- This makes esp work
+local version = "1.0.0"
+
 local function ModifyChildren(obj, func)
     for child in obj:Children() do
         func(child)
