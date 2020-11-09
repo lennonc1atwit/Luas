@@ -1,9 +1,12 @@
-local version = "1.0.0\n"
+local version = "1.0.0"
 local version_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/version.txt"
 local script_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/Core.lua"
 local script_name = GetScriptName()
 
-if http.Get(version_addr) ~= version then
+local version_http = http.Get(version_addr)
+version_http = string.gsub(version_http, "\n", "")
+
+if version_http ~= version then
     local new_script_raw = http.Get(script_addr)
     local old_script = file.Open(script_name, "w");
     old_script:Write(new_script_raw);
