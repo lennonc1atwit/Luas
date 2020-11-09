@@ -1,4 +1,15 @@
 local version = "1.0.0"
+local version_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/version.txt"
+local script_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/Core.lua"
+local script_name = GetScriptName()
+
+if http.Get(version_addr) ~= version then
+    local new_script_raw = http.Get(script_addr)
+    local old_script = file.Open(script_name, "w");
+    old_script:Write(new_script_raw);
+    old_script:Close();
+    print("Epacs Updated")
+end
 
 local function ModifyChildren(obj, func)
     for child in obj:Children() do
