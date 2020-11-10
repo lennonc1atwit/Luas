@@ -1,4 +1,4 @@
-local version = "1.0.0"
+local version = "1.1.0"
 local version_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/version.txt"
 local script_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/Core.lua"
 local script_name = GetScriptName()
@@ -14,6 +14,7 @@ if version_http ~= version then
     print("Epacs Updated")
 end
 
+-- The God function... this thing is very handy, i would like to be able to modify properties like parent of objects though
 local function ModifyChildren(obj, func)
     for child in obj:Children() do
         func(child)
@@ -22,24 +23,28 @@ local function ModifyChildren(obj, func)
 end
 
 -- Globals
-local local_player, choked, active_weapon = nil, 0
--- Visual tweak controls
-local thirdperson_active, local_alphas, overlay_settings, last_mode = true, nil, {}, nil
+local local_player = entities.GetLocalPlayer() 
+local choked = 0
+local tick_base = 0
+-- Cache to store variables we want between callback calls
+local cache = {} 
+-- Tables for gui management
 local blend_table = {"esp.chams.local.visible.clr", "esp.chams.local.occluded.clr", "esp.chams.ghost.occluded.clr", "esp.chams.ghost.visible.clr"}
--- Ragebot tweak controls
-local scout_hitchance, autostrafe_state, fakelag, double_fire, next_recharge, current_shot, m_nTickBase = nil, nil, nil, false, nil, 0, 0
 local doublefire_table = {"rbot.accuracy.weapon.shared.doublefire","rbot.accuracy.weapon.pistol.doublefire", "rbot.accuracy.weapon.hpistol.doublefire", "rbot.accuracy.weapon.smg.doublefire", "rbot.accuracy.weapon.rifle.doublefire", "rbot.accuracy.weapon.shotgun.doublefire", "rbot.accuracy.weapon.asniper.doublefire", "rbot.accuracy.weapon.lmg.doublefire"}
+
 -- Clearing all of enemy esp and adding it back just to add 1 option
 local enemyOverlayRef = gui.Reference("Visuals", "Overlay", "Enemy")
 
+cache.overlay_settings = {} -- add a cache index for our saved values
 ModifyChildren(enemyOverlayRef, function(obj)
     if obj:GetName() ~= "" then
-        overlay_settings[obj:GetName()] = obj:GetValue()
+        cache.overlay_settings[obj:GetName()] = obj:GetValue()
         obj:SetDisabled(true)
         obj:SetInvisible(true)
         obj:SetValue(false or "Off")
     end
 end)
+
 -- Visible only esp settings
 local visibleOverlayBox = gui.Groupbox(gui.Reference("Visuals", "Overlay"), "", 224,336,192,0)
 local enemyBox = gui.Combobox(visibleOverlayBox, "epacS.overlay.enemy.box", "Box", "Off", "Outlined", "Normal")
@@ -67,7 +72,7 @@ local enemyEspVisibility = gui.Combobox(gui.Reference("Visuals", "Overlay"), "ep
 -- Various Visuial Tweaks
 local visTwesksGroupbox = gui.Groupbox( gui.Reference("Visuals", "Local"), "Visuals Tweaks", 328, 220, 296, 0)
 local blendScoped = gui.Checkbox(visTwesksGroupbox, "epacS.scopeblend", "Blend On Scope", false)
-local blendPercent = gui.Slider(visTwesksGroupbox, "epacS.blendpercent", "Blend Percentage", 75, 0, 100);
+local blendPercent = gui.Slider(visTwesksGroupbox, "epacS.blendpercent", "Blend Percentage", 25, 0, 100);
 local dynamicSmoothing = gui.Checkbox(visTwesksGroupbox, "epacS.dynamicmodel", "Better Ghost Smoothing", false)
 local firstPersonGrenade = gui.Checkbox(visTwesksGroupbox, "epacS.firstpersongrenade", "Frist Person On Grenade (sv_cheats bypass)", false);
 local thirdpersonKey = gui.Keybox(visTwesksGroupbox, "epacS.thirdpersonkey", "Third Person Key", 97)
@@ -84,13 +89,6 @@ local movingThreshold = gui.Slider(fakelagRef, "epacS.movingvelocity", "Moving V
 -- Ragebot fixes
 local movementRef = gui.Reference("Ragebot", "Accuracy", "Movement")
 local weaponRef = gui.Reference("Ragebot", "Accuracy", "Weapon")
-
-ModifyChildren(weaponRef, function(obj)
-    if string.match(obj:GetName(), "Double Fire") then 
-        obj:SetInvisible(true)
-    end
-end)
-
 local jumpScoutFix = gui.Checkbox(movementRef, "espacS.scout.jumpfix", "Jump-Scout Fix", false)
 local jumpScoutHitchance = gui.Slider(movementRef, "espacS.scout.jumphitchance", "Jump-Scout Hitchance", 33, 0, 100)
 local dtGlobalToggle = gui.Keybox(weaponRef, "epacs.doubletap.key", "Double Tap Toggle", 0)
@@ -98,35 +96,41 @@ local dtGlobalToggleMode = gui.Combobox(weaponRef, "epacs.doubletap.mode", "Doub
 local dtRechargeDelay = gui.Slider(weaponRef, "epacs.doubletap.delay", "Recharge Delay", 0, 0, 2, 0.05)
 -- Gui finishing touches
 gui.Reference("Misc", "Enhancement", "Fakelag", "Conditions"):SetInvisible(true)
-triggerPeek:SetDescription("Lag your model behind wall when peeking.")
-triggerMultibox:SetDescription("Configure fakelag options.")
-movingThreshold:SetDescription("Minimum threshold for moving fakelag to trigger.")
-triggerPeek:SetDescription("Lag your model behind wall when peeking.")
-triggerMultibox:SetDescription("Configure fakelag options.")
-movingThreshold:SetDescription("Minimum threshold for moving fakelag to trigger.")
-jumpScoutFix:SetDescription("Disable autostrafer when jump scouting.")
-jumpScoutHitchance:SetDescription("Modify hitchance when jump scouting with fix.")
-dtGlobalToggle:SetDescription("Toggle double fire on all weapons.")
-dtGlobalToggleMode:SetDescription("Select mode for double fire.")
+
 dtRechargeDelay:SetDescription("Delay in seconds before double fire attempts to recharge.")
+jumpScoutHitchance:SetDescription("Modify hitchance when jump scouting with fix.")
+movingThreshold:SetDescription("Minimum threshold for moving fakelag to trigger.")
+movingThreshold:SetDescription("Minimum threshold for moving fakelag to trigger.")
 firstPersonGrenade:SetDescription("Toggles first person when holding grenades.")
 dynamicSmoothing:SetDescription("Toggles smoothing based on choked ticks.")
 thirdpersonKey:SetDescription("Key to toggle perspective for nade fix.")
-blendScoped:SetDescription("Lower model alpha when scoped.")
-enemyBox:SetDescription("Draw 2D box around entity.")
-enemyName:SetDescription("Draw entity name.")
-enemySkeleton:SetDescription("Draw player skeleton.")
-enemyHealth:SetDescription("Configure health options.")
-enemyArmor:SetDescription("Indicate helmet and kevlar.")
-enemyWeapon:SetDescription("Draw weapon of player.")
-enemyAmmo:SetDescription("Amount of ammo left in weapon.")
+triggerPeek:SetDescription("Lag your model behind wall when peeking.")
+triggerPeek:SetDescription("Lag your model behind wall when peeking.")
+jumpScoutFix:SetDescription("Disable autostrafer when jump scouting.")
+dtGlobalToggle:SetDescription("Toggle double fire on all weapons.")
+dtGlobalToggleMode:SetDescription("Select mode for double fire.")
 enemyMoney:SetDescription("Draw amount of money player has.")
-
-enemyBox:SetPosY(-48)
-enemyBoxColor:SetPosY(-48)
-enemyEspVisibility:SetPosY(30)
-enemyEspVisibility:SetPosX(240)
+triggerMultibox:SetDescription("Configure fakelag options.")
+triggerMultibox:SetDescription("Configure fakelag options.")
+blendScoped:SetDescription("Lower model alpha when scoped.")
+enemyAmmo:SetDescription("Amount of ammo left in weapon.")
+enemyArmor:SetDescription("Indicate helmet and kevlar.")
+enemyHealth:SetDescription("Configure health options.")
+enemyBox:SetDescription("Draw 2D box around entity.")
+enemySkeleton:SetDescription("Draw player skeleton.")
+enemyWeapon:SetDescription("Draw weapon of player.")
+enemyName:SetDescription("Draw entity name.")
 enemyEspVisibility:SetWidth(160)
+enemyEspVisibility:SetPosX(240)
+enemyEspVisibility:SetPosY(30)
+enemyBoxColor:SetPosY(-48)
+enemyBox:SetPosY(-48)
+
+ModifyChildren(weaponRef, function(obj)
+    if string.match(obj:GetName(), "Double Fire") then 
+        obj:SetInvisible(true)
+    end
+end)
 
 local function getBoundingBox(entity)
 	local origin = entity:GetAbsOrigin();
@@ -163,34 +167,36 @@ end
 
 local function HandleDoubleTap()
     -- Rehcarge reset
-    if next_recharge and (next_recharge < globals.CurTime() or not double_fire)then
-        next_recharge = nil
+    if cache.next_recharge and (cache.next_recharge < globals.CurTime() or not cache.double_fire)then
+        cache.next_recharge = nil
     end
+
     -- Double fire toggle
     if dtGlobalToggle:GetValue() ~= 0 and input.IsButtonPressed(dtGlobalToggle:GetValue()) then
-        double_fire = not double_fire
+        cache.double_fire = not cache.double_fire
     end
-     -- Get doubletap mode
+    
+    -- Get doubletap mode
     set_mode = dtGlobalToggleMode:GetValue() + 1
     -- check for toggle and recharge delay
-    if not double_fire or (next_recharge and globals.CurTime() < next_recharge) then
+    if not cache.double_fire or (cache.next_recharge and globals.CurTime() < cache.next_recharge) then
         set_mode = 0
     end
     -- Set vars
-    for i, varname in ipairs(doublefire_table) do 
+    for i, varname in ipairs(doublefire_table) do
         gui.SetValue(varname, set_mode)
     end
 
-    -- Disable fakelag while recharging
-    if not fakelag then 
-        fakelag = gui.GetValue("misc.fakelag.enable")
+    -- Store fakelag setting
+    if not cache.fakelag then 
+        cache.fakelag = gui.GetValue("misc.fakelag.enable")
     end
-
-    if next_recharge then
+    -- Disable fakelag while recharging
+    if cache.next_recharge then
             gui.SetValue("misc.fakelag.enable", false)
-    elseif fakelag then
-        gui.SetValue("misc.fakelag.enable", fakelag)
-        fakelag = nil
+    elseif cache.fakelag then
+        gui.SetValue("misc.fakelag.enable", cache.fakelag)
+        cache.fakelag = nil
     end
 
     -- Double fire Indicator 
@@ -205,8 +211,8 @@ local function HandleDoubleTap()
         draw.RoundedRectFill(x1,y1,x2,y2,5)
         -- Bar percentage
         local string = "SHIFT"
-        if next_recharge then
-            local percent = 1 - (next_recharge - globals.CurTime()) / dtRechargeDelay:GetValue()
+        if cache.next_recharge then
+            local percent = 1 - (cache.next_recharge - globals.CurTime()) / dtRechargeDelay:GetValue()
             local barWidth = 130 * percent
             local bx1, by1 = sw/2 - barWidth/2 , sh - offset
             local bx2, by2 = sw/2 + barWidth/2 , sh - offset + height
@@ -218,7 +224,7 @@ local function HandleDoubleTap()
             draw.RoundedRect(bx1,by1,bx2,by2,5)
 
             string = "DELAY"
-        elseif not double_fire then
+        elseif not cache.double_fire then
             string = "OFF"
         end
         -- Outline
@@ -244,48 +250,43 @@ callbacks.Register("Draw", function()
         -- Reset thirdperson
         client.Command("firstperson", true);
         -- Reset jump scout states
-        if autostrafe_state then 
-            gui.SetValue("misc.strafe.enable", autostrafe_state) 
-            autostrafe_state = nil
+        if cache.autostrafe_state then 
+            gui.SetValue("misc.strafe.enable", cache.autostrafe_state) 
+            cache.autostrafe_state = nil
         end
-        if scout_hitchance then 
-            gui.SetValue("rbot.accuracy.weapon.scout.hitchance", scout_hitchance)
-            scout_hitchance = nil
+        if cache.scout_hitchance then 
+            gui.SetValue("rbot.accuracy.weapon.scout.hitchance", cache.scout_hitchance)
+            cache.scout_hitchance = nil
         end
     end
 
     if local_player then
-        active_weapon = local_player:GetPropEntity("m_hActiveWeapon")
+        cache.active_weapon = local_player:GetPropEntity("m_hActiveWeapon")
 
         -- Blend on scope
-        if blendScoped:GetValue() then
+        if blendScoped:GetValue() and (cache.active_weapon:GetWeaponType() == 3 or cache.active_weapon:GetWeaponType() == 5) and cache.active_weapon:GetPropInt("m_zoomLevel") ~= 0 then
             -- Save alphas to resore
-            if not local_alphas then
-                local_alphas = {}
+            if not cache.local_alphas then
+                cache.local_alphas = {}
                 for i, var in ipairs(blend_table) do
                     local r, g, b, a = gui.GetValue(var)
-                    table.insert(local_alphas, a)
+                    table.insert(cache.local_alphas, a)
                 end
             end
 
-            -- Factor of alpha modulation
-            local coe = 1
-            if (active_weapon:GetWeaponType() == 3 or active_weapon:GetWeaponType() == 5) and active_weapon:GetPropInt("m_zoomLevel") ~= 0 then
-                coe = ((100 - blendPercent:GetValue()) / 100)
-            end
             -- Set all the alphas
             for i, var in ipairs(blend_table) do
                 local r, g, b, a = gui.GetValue(var)
-                gui.SetValue(var, r, g, b, local_alphas[i] * coe)
+                gui.SetValue(var, r, g, b, cache.local_alphas[i] * ((100-blendPercent:GetValue()) / 100))
             end
 
-        elseif local_alphas then
+        elseif cache.local_alphas then
             -- restore on unscope and clear table
             for i, var in ipairs(blend_table) do
                 local r, g, b, a = gui.GetValue(var)
-                gui.SetValue(var, r, g, b, local_alphas[i])
+                gui.SetValue(var, r, g, b, cache.local_alphas[i])
             end
-            local_alphas = nil
+            cache.local_alphas = nil
         end
 
         -- smoothes model when extra fakelag is added
@@ -305,7 +306,7 @@ callbacks.Register("Draw", function()
         if firstPersonGrenade:GetValue() and local_player then
             gui.Reference("Visuals", "Local", "Camera", "Third Person Enable"):SetDisabled(true)
             gui.Reference("Visuals", "Local", "Camera", "Third Person Enable"):SetValue(false)
-            if active_weapon:GetWeaponType() == 9 or not local_player:IsAlive() then
+            if cache.active_weapon:GetWeaponType() == 9 or not local_player:IsAlive() then
                 client.Command("firstperson", true);
             else
                 if thirdperson_active then
@@ -333,20 +334,20 @@ callbacks.Register("Draw", function()
         if jumpScoutFix:GetValue() then
             local flags = local_player:GetPropInt("m_fFlags")
 
-            if active_weapon:GetName() == "weapon_ssg08" then
+            if cache.active_weapon:GetName() == "weapon_ssg08" then
                 -- Saves state of auto strafer to restore
-                if not autostrafe_state then
-                    autostrafe_state = gui.GetValue("misc.strafe.enable")
+                if not cache.autostrafe_state then
+                    cache.autostrafe_state = gui.GetValue("misc.strafe.enable")
                 end
                 -- Saves scout hitchance
-                if not scout_hitchance then
-                    scout_hitchance = gui.GetValue("rbot.accuracy.weapon.scout.hitchance")
+                if not cache.scout_hitchance then
+                    cache.scout_hitchance = gui.GetValue("rbot.accuracy.weapon.scout.hitchance")
                 end
 
                 -- Disables and re-enables autostrafer
                 -- You can change this threshold if you'd like
                 if velocity > 5 then
-                    gui.SetValue("misc.strafe.enable", autostrafe_state)
+                    gui.SetValue("misc.strafe.enable", cache.autostrafe_state)
                 else
                     gui.SetValue("misc.strafe.enable", false)
                 end
@@ -355,16 +356,16 @@ callbacks.Register("Draw", function()
                 if bit.band(flags, 1) == 0 then
                     gui.SetValue("rbot.accuracy.weapon.scout.hitchance", jumpScoutHitchance:GetValue())
                 else
-                    gui.SetValue("rbot.accuracy.weapon.scout.hitchance", scout_hitchance)
-                    scout_hitchance = nil
+                    gui.SetValue("rbot.accuracy.weapon.scout.hitchance", cache.scout_hitchance)
+                    cache.scout_hitchance = nil
                 end
 
             else
                 -- Resets strafe state
-                if autostrafe_state then
-                    gui.SetValue("misc.strafe.enable", autostrafe_state)
+                if cache.autostrafe_state then
+                    gui.SetValue("misc.strafe.enable", cache.autostrafe_state)
                 end
-                autostrafe_state = nil
+                cache.autostrafe_state = nil
             end
         end
 
@@ -372,24 +373,24 @@ callbacks.Register("Draw", function()
     end
 
     -- Esp Logic
-    if last_mode ~= enemyEspVisibility:GetValue() then
+    if cache.last_mode ~= enemyEspVisibility:GetValue() then
         if enemyEspVisibility:GetValue() == 0 then
-            if overlay_settings then
+            if cache.overlay_settings then
                 ModifyChildren(enemyOverlayRef, function(obj)
                     if obj:GetName() ~= "" then
                         obj:SetDisabled(false)
                         obj:SetInvisible(false)
-                        obj:SetValue(overlay_settings[obj:GetName()])
+                        obj:SetValue(cache.overlay_settings[obj:GetName()])
                     end
                 end)
-                overlay_settings = nil
+                cache.overlay_settings = nil
             end
             visibleOverlayBox:SetInvisible(true)
-        elseif not overlay_settings then
-            overlay_settings = {}
+        elseif not cache.overlay_settings then
+            cache.overlay_settings = {}
             ModifyChildren(enemyOverlayRef, function(obj)
                 if obj:GetName() ~= "" then
-                    overlay_settings[obj:GetName()] = obj:GetValue()
+                    cache.overlay_settings[obj:GetName()] = obj:GetValue()
                     obj:SetDisabled(true)
                     obj:SetInvisible(true)
                     obj:SetValue(false or "Off")
@@ -397,7 +398,7 @@ callbacks.Register("Draw", function()
             end)
             visibleOverlayBox:SetInvisible(false)
         end
-        last_mode = enemyEspVisibility:GetValue()
+        cache.last_mode = enemyEspVisibility:GetValue()
     end
 end)
 
@@ -539,12 +540,12 @@ callbacks.Register("CreateMove", function(cmd)
     if local_player then
         local temp = local_player:GetPropInt("localdata", "m_nTickBase")
         
-        if current_shot and math.abs(temp - m_nTickBase) > 6 then
-            next_recharge = globals.CurTime() + dtRechargeDelay:GetValue()
-            current_shot = nil
+        if cache.current_shot and math.abs(temp - cache.tick_base) > 6 then
+            cache.next_recharge = globals.CurTime() + dtRechargeDelay:GetValue()
+            cache.current_shot = nil
         end
 
-        m_nTickBase = temp
+        cache.tick_base = temp
     end
 end)
 
@@ -552,7 +553,7 @@ callbacks.Register("FireGameEvent", function(event)
     local curtime = globals.CurTime()
     if event:GetName() == "weapon_fire" then
         if (client.GetPlayerIndexByUserID(event:GetInt('userid')) == client.GetLocalPlayerIndex()) then
-            current_shot = active_weapon:GetPropFloat("m_fLastShotTime")
+            cache.current_shot = cache.active_weapon:GetPropFloat("m_fLastShotTime")
         end
     elseif event:GetName() == "player_connect_full" then
         gui.SetValue("misc.bypasscheats", true)
@@ -565,24 +566,32 @@ callbacks.Register("Unload", function()
     gui.Reference("Visuals", "Local", "Camera", "Third Person Enable"):SetDisabled(false)
     -- Fakelag Reset
     gui.Reference("Misc", "Enhancement", "Fakelag", "Conditions"):SetInvisible(false);
-    if fakelag then gui.SetValue("misc.fakelag.enable", fakelag) end
+    if cache.fakelag then gui.SetValue("misc.fakelag.enable", cache.fakelag) end
     -- Reset scout and autostrafer
-    if autostrafe_state then gui.SetValue("misc.strafe.enable", autostrafe_state) end
-    if scout_hitchance then gui.SetValue("rbot.accuracy.weapon.scout.hitchance", scout_hitchance) end
+    if cache.autostrafe_state then gui.SetValue("misc.strafe.enable", cache.autostrafe_state) end
+    if cache.scout_hitchance then gui.SetValue("rbot.accuracy.weapon.scout.hitchance", cache.scout_hitchance) end
     -- Setting dt stuff to visible
     ModifyChildren(weaponRef, function(obj)
         obj:SetInvisible(false)
     end)
     -- Reset chams
-    if local_alphas then for i, var in ipairs(blend_table) do gui.SetValue(var, local_alphas[i][1], local_alphas[i][2], local_alphas[i][3], local_alphas[i][4]) end end
+    if cache.local_alphas then
+        for i, var in ipairs(blend_table) do
+            local r, g, b, a = gui.GetValue(var)
+            gui.SetValue(var, r, g, b, cache.local_alphas[i])
+        end
+    end
     -- Restoring enemy overlay
-    if overlay_settings then
-        ModifyChildren(enemyOverlayRef, function(obj) 
-            obj:SetDisabled(false)
-            obj:SetInvisible(false)
-            obj:SetValue(overlay_settings[obj:GetName()])
+    if cache.overlay_settings then
+        ModifyChildren(enemyOverlayRef, function(obj)
+            if obj:GetName() ~= "" then
+                obj:SetDisabled(false)
+                obj:SetInvisible(false)
+                obj:SetValue(cache.overlay_settings[obj:GetName()])
+            end
         end)
     end
+    visibleOverlayBox:SetInvisible(true)
 end)
 
 client.AllowListener("weapon_fire")
