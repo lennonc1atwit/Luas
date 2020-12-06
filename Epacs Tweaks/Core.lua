@@ -540,7 +540,7 @@ callbacks.Register("CreateMove", function(cmd)
     if local_player then
         local temp = local_player:GetPropInt("localdata", "m_nTickBase")
         
-        if cache.current_shot and math.abs(temp - cache.tick_base) > 6 then
+        if cache.current_shot and math.abs(temp - cache.tick_base) > 6 and dtRechargeDelay:GetValue() > 0 then
             cache.next_recharge = globals.CurTime() + dtRechargeDelay:GetValue()
             cache.current_shot = nil
         end
