@@ -1,4 +1,4 @@
-local version = "1.1.1"
+local version = "1.1.2"
 local version_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/version.txt"
 local script_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/Core.lua"
 local script_name = GetScriptName()
@@ -70,7 +70,7 @@ local enemyAmmoClr = gui.ColorPicker(enemyAmmo, "epacS.overlay.enemy.ammo.clr", 
 local enemyMoney = gui.Checkbox(visibleOverlayBox, "epacS.overlay.enemy.money", "Money", false)
 local enemyEspVisibility = gui.Combobox(gui.Reference("Visuals", "Overlay"), "epacS.overlay.enemy.visibility", "", "Always", "Visible", "Spotted + Visible")
 -- Various Visuial Tweaks
-local visTwesksGroupbox = gui.Groupbox( gui.Reference("Visuals", "Local"), "Visuals Tweaks", 328, 220, 296, 0)
+local visTwesksGroupbox = gui.Reference("Visuals", "Local", "Helper")
 local blendScoped = gui.Checkbox(visTwesksGroupbox, "epacS.scopeblend", "Blend On Scope", false)
 local blendPercent = gui.Slider(visTwesksGroupbox, "epacS.blendpercent", "Blend Percentage", 25, 0, 100);
 local dynamicSmoothing = gui.Checkbox(visTwesksGroupbox, "epacS.dynamicmodel", "Better Ghost Smoothing", false)
