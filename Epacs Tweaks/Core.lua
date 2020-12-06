@@ -1,4 +1,4 @@
-local version = "1.1.0"
+local version = "1.1.1"
 local version_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/version.txt"
 local script_addr = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Epacs%20Tweaks/Core.lua"
 local script_name = GetScriptName()
