@@ -1,10 +1,12 @@
 -- Presets and updater stuff
 local VERSION_LINK = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Theme%20Manager/version.txt"
 local PRESET_LINK = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Theme%20Manager/Presets.txt"
-local SCRIPT_LINK = ""
+local SCRIPT_LINK = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Theme%20Manager/Core.lua"
 local SCRIPT_NAME = GetScriptName()
 local SCRIPT_VERSION = "1.0.0"
 local PRESETS = {}
+
+local REAL_VERSION = string.gsub(http.Get(VERSION_LINK), "\n", "")
 
 if SCRIPT_VERSION ~= http.Get(VERSION_LINK) then
     local new_script_raw = http.Get(SCRIPT_LINK)
@@ -12,7 +14,6 @@ if SCRIPT_VERSION ~= http.Get(VERSION_LINK) then
     old_script:Write(new_script_raw);
     old_script:Close();
     print("Theme Manager Updated")
-    LoadScript(SCRIPT_NAME..".lua")
 end
 
 for str in string.gmatch(http.Get(PRESET_LINK), "[^\r\n]+") do
