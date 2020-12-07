@@ -8,7 +8,7 @@ local PRESETS = {}
 
 local REAL_VERSION = string.gsub(http.Get(VERSION_LINK), "\n", "")
 
-if SCRIPT_VERSION ~= http.Get(VERSION_LINK) then
+if SCRIPT_VERSION ~= REAL_VERSION then
     local new_script_raw = http.Get(SCRIPT_LINK)
     local old_script = file.Open(SCRIPT_NAME, "w");
     old_script:Write(new_script_raw);
