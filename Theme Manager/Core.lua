@@ -3,7 +3,7 @@ local VERSION_LINK = "https://raw.githubusercontent.com/lennonc1atwit/Luas/maste
 local PRESET_LINK = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Theme%20Manager/Presets.txt"
 local SCRIPT_LINK = "https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Theme%20Manager/Core.lua"
 local SCRIPT_NAME = GetScriptName()
-local SCRIPT_VERSION = "1.0.0"
+local SCRIPT_VERSION = "1.1.0"
 local PRESETS = {}
 
 local REAL_VERSION = string.gsub(http.Get(VERSION_LINK), "\n", "")
@@ -277,6 +277,10 @@ LoadPreset:SetPosY(184)
 LoadPreset:SetWidth(136)
 LoadPreset:SetHeight(28)
 
+local SafeMode = gui.Checkbox(SavedGroupbox, "safemode", "Safe Mode", true)
+SafeMode:SetDescription("Disable delete button.")
+SafeMode:SetPosX(460)
+SafeMode:SetPosY(394)
 -- Finishing touches
 
 local names = {}
@@ -286,3 +290,6 @@ end
 
 PresetThemes:SetOptions(unpack(names))
 refresh()
+
+-- Just safe mode lol
+callbacks.Register("Draw", function() DeleteButton:SetDisabled(SafeMode:GetValue()) end)
