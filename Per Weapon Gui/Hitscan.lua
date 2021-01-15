@@ -120,12 +120,13 @@ local function ShutDown()
         end
     end
 end
-
+callbacks.Register("Unload", ShutDown)
 callbacks.Register("Draw", RefreshGUI)
 
 --// END OF FRAMEWORK //--
 -- This is where the fun begins!
 local HSREF = gui.Reference("Ragebot", "Hitscan", "Hitbox Points")
+gui.Reference("Ragebot", "Hitscan", "Advanced"):SetDisabled(true)
 
 -- Processing Time -> Ragebot, Hitscan, Hitbox Points
 local maxproc = CreatePerWeaponSlider(HSREF, "maxprocessingtime", "Max Processing Time", 65, 5, 75, 5, "Lower this value to maintain better FPS.")
@@ -151,5 +152,6 @@ callbacks.Register("Draw", function()
     end
 end)
 
-
-callbacks.Register("Unload", ShutDown)
+callbacks.Register("Unload", function()
+    gui.Reference("Ragebot", "Hitscan", "Advanced"):SetDisabled(false)
+end)
