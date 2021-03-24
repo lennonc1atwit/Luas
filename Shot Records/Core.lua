@@ -78,7 +78,7 @@ function DrawSpread(src, dst1, dst2, deg)
     local x, y =   client.WorldToScreen( src  )
     local x1, y1 = client.WorldToScreen( dst1 )
     local x2, y2 = client.WorldToScreen( dst2 )
-
+    
     draw.Color(255, 0, 0, 255)
     draw.Line(x, y, x1, y1)
     draw.Color(0, 255, 0, 255)
@@ -88,20 +88,20 @@ function DrawSpread(src, dst1, dst2, deg)
 end
 
 callbacks.Register( "Draw", function() 
-    if false and latest_shot[1] then
+    if latest_shot[1] ~= nil then
         DrawSpread(latest_shot[1], latest_shot[2], latest_shot[3], latest_shot[4])
     end
 end)
 
 local function CalculateSpread(angle, B, C)
-    local A = B + angle:Forward()
+    local A = B + angle:Forward() * 1000
 
     local AB = B - A
     local BC = B - C
 
     local deg = math.deg(math.acos(AB:Dot(BC) / (AB:Length() * BC:Length())))
 
-    latest_shot = {src, dst, dst_pred, deg}
+    latest_shot = {B, C, A, deg}
 
     return deg
 end
@@ -115,8 +115,8 @@ local shot_angle = nil
 callbacks.Register( "CreateMove", function(cmd)
     local local_player = entities.GetLocalPlayer()
 
-    if bit.band(cmd.buttons, bit.lshift(1,0)) == bit.lshift(1,0) and not input.IsButtonDown(1)then
-        local recoil = local_player:GetPropVector("localdata", "m_Local", "m_aimPunchAngle")*2
+    if bit.band(cmd.buttons, bit.lshift(1,0)) == bit.lshift(1,0) then
+        local recoil = local_player:GetPropVector("localdata", "m_Local", "m_aimPunchAngle") * 2
         shot_angle =  cmd.viewangles
         shot_angle.x = shot_angle.x + recoil.x
         shot_angle.y = shot_angle.y + recoil.y
@@ -145,7 +145,6 @@ callbacks.Register( "CreateMove", function(cmd)
         end
     elseif not shot_hit and Target and not tick_manual then
         local msg = string.format( "[MISS] on %s [ spread: %.3f | weapon: %s ]", Target:GetName(), spread, tick_weapon)
-
         AddToNotify(clr, msg, true)
     end
 
