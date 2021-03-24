@@ -94,7 +94,7 @@ callbacks.Register( "Draw", function()
 end)
 
 local function CalculateSpread(angle, B, C)
-    local A = src + angle:Forward()
+    local A = B + angle:Forward()
 
     local AB = B - A
     local BC = B - C
