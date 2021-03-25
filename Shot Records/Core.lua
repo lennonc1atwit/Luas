@@ -73,7 +73,9 @@ function ShotEvent:New(impacts, hurts, manual, weapon, spread, target, WIP)
     return event
 end
 
-local latest_shot = {}
+local shots = {}
+
+local shot_queue = {}
 function DrawSpread(src, dst1, dst2, deg)
     local x, y =   client.WorldToScreen( src  )
     local x1, y1 = client.WorldToScreen( dst1 )
@@ -88,9 +90,23 @@ function DrawSpread(src, dst1, dst2, deg)
 end
 
 callbacks.Register( "Draw", function() 
-    if latest_shot[1] ~= nil then
-        DrawSpread(latest_shot[1], latest_shot[2], latest_shot[3], latest_shot[4])
+    if #shots > 0 then
+        local i = 1
+        while i <= #shots do
+            local shot = shots[i]
+            DrawSpread(shots[i][1], shots[i][2], shots[i][3], shots[i][4])
+            if shot[5] + shot[6] <= globals.CurTime() then
+                table.remove(shots, i)
+            else 
+                i = i + 1
+            end
+        end
     end
+
+
+    draw.Text(600, 100, "First Shot: "..(shot_queue[1] and "Reg" or "UnReg"))
+    draw.Text(600, 115, "Second Shot: "..(shot_queue[2] and "Reg" or "UnReg"))
+
 end)
 
 local function CalculateSpread(angle, B, C)
@@ -101,7 +117,7 @@ local function CalculateSpread(angle, B, C)
 
     local deg = math.deg(math.acos(AB:Dot(BC) / (AB:Length() * BC:Length())))
 
-    latest_shot = {B, C, A, deg}
+    table.insert(shots, {B, C, A, deg, globals.CurTime(), 8})
 
     return deg
 end
@@ -110,46 +126,79 @@ local tick_impacts = {}
 local tick_hurts = {}
 local tick_manual = false
 local tick_weapon = ""
+local tick_last
 
-local shot_angle = nil
 callbacks.Register( "CreateMove", function(cmd)
+    local tick_count = cmd.tick_count
     local local_player = entities.GetLocalPlayer()
 
-    if bit.band(cmd.buttons, bit.lshift(1,0)) == bit.lshift(1,0) then
+    -- log angles of potential shots
+    if bit.band(cmd.buttons, bit.lshift(1,0)) == bit.lshift(1,0) and tick_last ~= tick_count then
+        -- account for recoil control
         local recoil = local_player:GetPropVector("localdata", "m_Local", "m_aimPunchAngle") * 2
-        shot_angle =  cmd.viewangles
+        local shot_angle =  cmd.viewangles
         shot_angle.x = shot_angle.x + recoil.x
         shot_angle.y = shot_angle.y + recoil.y
-    end
 
-    if #tick_impacts <= 0 then
-        return
-    end
-    
-    local shot_hit = #tick_hurts > 0
-    local clr = {r = not shot_hit and 255 or 0, g = shot_hit and 255 or 0, b = 0, a = 255}
-    local spread = CalculateSpread(shot_angle, tick_impacts[1], tick_impacts[#tick_impacts])
-    
-    if shot_hit then
-        for i, hurt_event in ipairs(tick_hurts) do
-            local msg = string.format( "[HURT] %s for %s in %s (%s hp left) [ spread: %.3f deg | weapon: %s ]", 
-                hurt_event.player:GetName(), -- Name
-                hurt_event.damage, -- Damage
-                Hit_Groups[hurt_event.hitgroup+1], -- Hitgroup
-                hurt_event.health, -- Remaining health
-                spread, -- Spread
-                tick_weapon -- Weapon
-            )
+        local shot_pos = local_player:GetAbsOrigin() + local_player:GetPropVector("localdata", "m_vecViewOffset[0]")
 
-            AddToNotify(clr, msg, true)
+        print("Shot Detected",   cmd.sendpacket, cmd.hasbeenpredicted)
+
+        if shot_queue[1] == nil and shot_queue[2] == nil then
+            shot_queue[1] = {shot_angle, shot_pos}
+            print("Queue 1 Filled",   tick_count)
+        else    
+            shot_queue[2] = {shot_angle, shot_pos}
+            print("Queue 2 Filled",   tick_count)
         end
-    elseif not shot_hit and Target and not tick_manual then
-        local msg = string.format( "[MISS] on %s [ spread: %.3f | weapon: %s ]", Target:GetName(), spread, tick_weapon)
-        AddToNotify(clr, msg, true)
+
+        tick_last = tick_count
     end
 
-    -- clear tick based vars for next tick
-    tick_impacts, tick_hurts, tick_manual, tick_weapon = {}, {}, false, ""
+    -- if we have impacts of a shot this tick match it to an angle
+    if #tick_impacts > 0 then 
+        print("Shot Impacts Detected", tick_count)
+
+        -- match shot impacts to pos and view angles
+        local shot = nil
+        if shot_queue[1] ~= nil then
+            shot = shot_queue[1]
+            shot_queue[1] = nil
+        elseif shot_queue[2] ~= nil then
+            shot = shot_queue[2]
+            shot_queue[2] = nil
+        end
+
+        -- if we matched a shot log it
+        if shot then 
+            print("Matched Ang/Pos to Shot", tick_count)
+
+            local spread = CalculateSpread(shot[1], shot[2], tick_impacts[#tick_impacts])
+            
+            local shot_hit = #tick_hurts > 0
+            local clr = {r = not shot_hit and 255 or 0, g = shot_hit and 255 or 0, b = 0, a = 255}
+
+            if shot_hit then
+                for i, hurt_event in ipairs(tick_hurts) do
+                    local msg = string.format( "[HURT] %s for %s in %s (%s hp left) [ spread: %.3f deg | weapon: %s ]", 
+                        hurt_event.player:GetName(), -- Name
+                        hurt_event.damage, -- Damage
+                        Hit_Groups[hurt_event.hitgroup+1], -- Hitgroup
+                        hurt_event.health, -- Remaining health
+                        spread, -- Spread
+                        tick_weapon -- Weapon
+                    )
+
+                    AddToNotify(clr, msg, true)
+                end
+            elseif not shot_hit and Target and not tick_manual then
+                local msg = string.format( "[MISS] on %s [ spread: %.3f | weapon: %s ]", Target:GetName(), spread, tick_weapon)
+                AddToNotify(clr, msg, true)
+            end
+        end
+        print("")
+        tick_impacts, tick_hurts, tick_manual, tick_weapon = {}, {}, false, ""
+    end
 end)
 
 -- Log events to be parsed
@@ -167,7 +216,6 @@ callbacks.Register( "FireGameEvent", function(event)
 
                 -- add our position to impacts to use as source vector
                 local eye_pos = local_player:GetAbsOrigin() + local_player:GetPropVector("localdata", "m_vecViewOffset[0]")
-                
                 table.insert(tick_impacts, eye_pos)
             end
 
@@ -202,7 +250,9 @@ callbacks.Register( "FireGameEvent", function(event)
 end)
 
 callbacks.Register( "AimbotTarget", function(entity) 
-    Target = entity
+    if entity:GetName() then
+        Target = entity
+    end
 end)
 
 callbacks.Register("Draw", UpdateNotify)
@@ -211,5 +261,7 @@ callbacks.Register("Draw", DrawNotify)
 client.AllowListener("weapon_fire")
 client.AllowListener("bullet_impact")
 client.AllowListener("player_hurt")
+
+gui.Command("clear")
 
 
