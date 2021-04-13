@@ -22,12 +22,7 @@ end
 
 require "Libraries/Notify"
 
-
-local DEBUG_MODE = true
-
 local local_player = entities.GetLocalPlayer()
-
-local Shots = {}
 
 local Color = {
     red = {r = 255, g = 0, b  = 0, a = 255},
@@ -70,41 +65,6 @@ local function CalculateSpread(view_angles, src, dst)
     local deg = math.deg(math.acos(AB:Dot(AC) / (AB:Length() * AC:Length())))
     
     return deg
-end
-
-function DrawSpread(src, dst1, dst2, deg)
-    local x, y =   client.WorldToScreen( src  )
-    local x1, y1 = client.WorldToScreen( dst1 )
-    local x2, y2 = client.WorldToScreen( dst2 )
-    
-    draw.Color(255, 0, 0, 255)
-    draw.Line(x, y, x1, y1)
-    draw.Color(0, 255, 0, 255)
-    draw.Line(x, y, x2, y2)
-    draw.Color(255, 255, 255, 255)
-    draw.Text(x, y, deg)
-end
-
-local function DrawShots()
-    if DEBUG_MODE then
-        if #Shots > 0 then
-            local i = 1
-            while i <= #Shots do
-                local shot = Shots[i]
-                DrawSpread(shot.pos, shot.impacts[#shot.impacts],  shot.pos + shot.ang:Forward() * 1000, shot.spread)
-
-                if globals.TickCount() - shot.tick > 64 then
-                    table.remove(Shots, i)
-                else        
-                    i = i + 1
-                end
-            end
-        end
-
-        draw.Text(600, 85, "impacts: "..#Cache.bullet_impact )
-        draw.Text(600, 100, "First Shot: "..(Cache.view_angles[1] and "Reg" or "UnReg"))
-        draw.Text(600, 115, "Second Shot: "..(Cache.view_angles[2] and "Reg" or "UnReg"))
-    end
 end
 
 local function DisplayShot(shot)
@@ -219,8 +179,6 @@ local function CompileShot(predicted_shot)
         tick = globals.TickCount(),
         spread = CalculateSpread(predicted_shot[1], predicted_shot[2], Cache.bullet_impact[#Cache.bullet_impact])
     }
-
-    table.insert(Shots, shot)
     
     DisplayShot(shot)
 end
@@ -295,7 +253,6 @@ callbacks.Register( "CreateMove", HandleViewAngles)
 
 callbacks.Register( "AimbotTarget", UpdateTarget)
 
-callbacks.Register( "Draw", DrawShots)
 callbacks.Register( "Draw", UpdateNotify)
 callbacks.Register( "Draw", DrawNotify)
 
