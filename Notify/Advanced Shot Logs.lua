@@ -7,7 +7,7 @@ end)
 
 if not installed then
     local script = http.Get("https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Notify/Core.lua");
-    file.Write("Libraries/Notify.lua", body);
+    file.Write("Libraries/Notify.lua", script);
 end
 
 local function require(filename)
