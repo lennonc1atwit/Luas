@@ -3,7 +3,6 @@ local notifyTime = 16;
 
 local fontName = "tomah";
 local fontSize = 14;
-local fontweight = 550;
 
 local xOffset = 8;
 local yOffset = 5;
@@ -23,6 +22,14 @@ local function DrawTextShadow(x, y, string, r, g, b, a)
     draw.Text(x+1, y+1, string); 
     draw.Color(r, g, b, a);
     draw.Text(x, y, string);
+end
+
+function PushNotifySettings(_time, _fontName, _fontSize, fontWeight)
+    notifyTime = _time;
+
+    fontName = _fontName;
+    fontSize = _fontSize;
+    fontweight = _fontWeight;
 end
 
 -- I dont really need a function for this tbh but its here
@@ -51,7 +58,7 @@ end
 
 -- Drawing animation magic ripped straight from leaked source code :)
 function DrawNotify()
-    local drawFont = draw.CreateFont(fontName, fontSize, fontWeight);
+    local drawFont = draw.CreateFont(fontName, fontSize, 550);
     draw.SetFont(drawFont);
 
     -- Log base offsets
