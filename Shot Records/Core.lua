@@ -1,3 +1,20 @@
+local hitHeader, missHeader
+--[[
+    YOU CAN CUSTOMIZE MESSAGES MORE HERE
+]]
+local function formatHitMessage(name, damage, hitbox, remaining) 
+    local msg = string.format("%s%s damage to %s %s (%s hp left) ", hitHeader:GetValue(), damage, name, hitbox, remaining)
+    return msg
+end
+
+local function formatMissMessage(name, remaining) 
+    local msg = string.format("%smissed %s (%s hp left) ", missHeader:GetValue(), name, remaining)
+    return msg
+end
+--[[
+    DONT TOUCH ANYTHING PAST HERE
+]]
+
 -- making sure you have notify stuff and loading it
 local installed = false
 file.Enumerate(function(filename)
@@ -30,10 +47,16 @@ local logSettingsGroup = gui.Groupbox( ref, "Settings", 16, 16, 296)
         local logOther = gui.Checkbox( logOptions, "other.enable", "Other", true )
             local otherColor = gui.ColorPicker( logOther, "logs.color.other", "Other", 255, 255, 0, 255)
 
+    
     local logFlags = gui.Multibox( logSettingsGroup, "Flags")
-        local flagSpread = gui.Checkbox( logFlags, "flags.spread", "Spread", true)
-        local flagWeapon = gui.Checkbox( logFlags, "flags.weapon", "Weapon", true)
-        local flagtarget = gui.Checkbox( logFlags, "flags.target", "Target", true)
+    local flagOptions  = {
+        spread = gui.Checkbox( logFlags, "flags.spread", "Spread", true),
+        weapon = gui.Checkbox( logFlags, "flags.weapon", "Weapon", true),
+        target = gui.Checkbox( logFlags, "flags.target", "Target", true)
+    }
+    
+    hitHeader = gui.Editbox( logSettingsGroup, "hit.header", "hit header" )
+    missHeader = gui.Editbox( logSettingsGroup, "miss.header", "miss header" )
 
     local notifiyDuration = gui.Slider( logSettingsGroup, "logs.duration", "Log Duration", 8, 0, 16, 0.5)
     local notifyConsole = gui.Checkbox( logSettingsGroup, "logs.console", "Console", true)
@@ -42,38 +65,32 @@ local logFontGroup = gui.Groupbox( ref, "Font Settings", 32 + 296, 16, 296)
     local fontSize = gui.Slider( logFontGroup, "logs.font.size", "Font size", 14, 10, 24)
     local fontName = gui.Editbox( logFontGroup, "logs.font.name", "Font Name" )
 
-
-
-
-
 fontName:SetValue("tomah")
+hitHeader:SetValue("[HURT] ")
+missHeader:SetValue("[MISS] ")
 
 local applySettings = gui.Button(logFontGroup, "Apply Font Settings", function()
     PushNotifySettings(notifiyDuration:GetValue(), fontName:GetValue(), fontSize:GetValue())
     AddToNotify({r = 255, g = 255, b = 255, a = 255}, "Font Settings Updated", false)
 end )
-
-
 --[[
     Important script vars 
 ]]
-local DEBUG_MODE = true
-
 local local_player = entities.GetLocalPlayer()
 
+local Hit_Groups = {"GENERIC", "HEAD", "CHEST", "STOMACH", "LEFT ARM", "RIGHT ARM", "LEFT LEG", "RIGHT LEG", "NECK"}
+
 local Cache = {
+    current_target = nil,
     mouse_pressed = false,
     weapon_name = "",
     bullet_impact = {},
     player_hurt = {},
-    target = nil,
     view_angles = {
         [1] = nil,
         [2] = nil
     }
 }
-
-local Hit_Groups = {"GENERIC", "HEAD", "CHEST", "STOMACH", "LEFT ARM", "RIGHT ARM", "LEFT LEG", "RIGHT LEG", "NECK"}
 
 local Event_Table = {}
 --[[ 
@@ -105,36 +122,18 @@ local function CalculateSpread(view_angles, src, dst)
     return deg
 end
 
-function DrawSpread(src, dst1, dst2, deg)
-    local x, y =   client.WorldToScreen( src  )
-    local x1, y1 = client.WorldToScreen( dst1 )
-    local x2, y2 = client.WorldToScreen( dst2 )
-    
-    draw.Color(255, 0, 0, 255)
-    draw.Line(x, y, x1, y1)
-    draw.Color(0, 255, 0, 255)
-    draw.Line(x, y, x2, y2)
-    draw.Color(255, 255, 255, 255)
-    draw.Text(x, y, deg)
-end
-
-local function DrawShots()
-    if DEBUG_MODE then
-        draw.Text(600, 70, "Hurts: "..#Cache.player_hurt )
-        draw.Text(600, 85, "Impacts: "..#Cache.bullet_impact )
-        draw.Text(600, 100, "First Shot: "..(Cache.view_angles[1] and "Reg" or "UnReg"))
-        draw.Text(600, 115, "Second Shot: "..(Cache.view_angles[2] and "Reg" or "UnReg"))
-        draw.Text(600, 130, "Target: "..(Cache.target and Cache.target:GetName() or "nil"))
-        draw.Text(600, 145, "Last target: "..(Cache.last_target and Cache.last_target:GetName() or "nil"))
-    end
-end
-
 local function DisplayShot(shot)
     local msg = "nil"
     local r, g, b, a
     local hit_target = false
 
-    local flags = string.format( "[spread: %.3f deg | weapon: %s | target: %s ]", shot.spread, shot.weapon, shot.target)
+    -- Handle flag options
+    local flag_table = {}
+    for k ,obj in pairs(flagOptions) do 
+        if obj:GetValue() then
+            table.insert(flag_table, string.format( "%s: %s",k, tostring(shot[k])))
+        end
+    end
 
     -- log each hit in path and mark unintended ones as yellow
     if logOther:GetValue() or logHits:GetValue() then
@@ -142,18 +141,20 @@ local function DisplayShot(shot)
             local hurt_name = entities.GetByIndex( hurt.index ):GetName()
             local hurt_where = Hit_Groups[hurt.hitgroup]
 
-            msg = string.format("[HURT] %s damage to %s %s (%s hp left) ", hurt.damage, hurt_name, hurt_where, hurt.health)
-
+            -- select color based on who we aimed at and who we hit
             if shot.target:GetIndex() == hurt.index and logHits:GetValue() then
                 r, g, b, a = hitColor:GetValue()
             elseif logOther:GetValue() then
                 r, g, b, a = otherColor:GetValue()
             end
 
+            -- keep track if we hit target so we can log a miss is we hit someone else but not target
             hit_target = shot.target:GetIndex() == hurt.index or hit_target
 
+            msg = formatHitMessage(hurt_name, hurt.damage, hurt_where, hurt.health) 
+            
             if r then
-                AddToNotify({r=r,g=g,b=b,a=a}, msg..flags, notifyConsole:GetValue())
+                AddToNotify({r=r,g=g,b=b,a=a}, msg.."Flags: ["..table.concat(flag_table, " | ").."]", notifyConsole:GetValue())
             end
             
         end
@@ -161,10 +162,11 @@ local function DisplayShot(shot)
 
     -- if we didnt hit target
     -- or it was a manual shot
-    if logMiss:GetValue() and (shot.type == "aimbot" and not hit_target and shot.target) then 
-        msg = string.format("[MISS] on %s (%s hp left) ", shot.target:GetName(), shot.target:GetHealth())
+    if logMiss:GetValue() and (shot.type == "aimbot" and shot.target and not hit_target) then 
+        msg = formatMissMessage(shot.target:GetName(), shot.target:GetHealth()) 
+        
         r, g, b, a = missColor:GetValue()
-        AddToNotify({r=r,g=g,b=b,a=a}, msg..flags, notifyConsole:GetValue())
+        AddToNotify({r=r,g=g,b=b,a=a}, msg.."Flags: ["..table.concat(flag_table, " | ").."]", notifyConsole:GetValue())
     end
 end
 --[[
@@ -181,7 +183,6 @@ Event_Table['weapon_fire'] = function(weapon_fire)
     table.insert(Cache.bullet_impact, eye_pos)
 
     Cache.weapon_name = weapon
-    Cache.mouse_pressed = input.IsButtonDown( 1 )
 end
 
 Event_Table["bullet_impact"] = function(bullet_impact)
@@ -200,30 +201,32 @@ end
 
 Event_Table["player_hurt"] = function(player_hurt)
     local attacker_index = entities.GetByUserID(player_hurt:GetInt("attacker")):GetIndex()
-    local victim = entities.GetByUserID(player_hurt:GetInt("userid"))
-	local victim_index = victim:GetIndex()
+
     -- we are not attacker
     if attacker_index ~= local_player:GetIndex() then return end
+
+    local victim = entities.GetByUserID(player_hurt:GetInt("userid"))
+	local victim_index = victim:GetIndex()
 
     local _damage = player_hurt:GetInt("dmg_health")
     local _health = player_hurt:GetInt("health")
     local _hitgroup = player_hurt:GetInt("hitgroup") + 1
 
-    -- anything but grenade
+    -- anything but grenade and knife
     if _hitgroup ~= 1  or Cache.weapon_name == "taser" then
         table.insert(Cache.player_hurt, {damage = _damage, health = _health, hitgroup = _hitgroup, index = victim_index})
         return
     end
 
-    local msg = string.format( "[HURT] %s damage to %s (%s hp left) ", _damage, victim:GetName(),  _health)
-    local r, g, b, a = logHits:GetValue()
-    AddToNotify({r=r,g=g,b=n,a=255}, msg, notifyConsole:GetValue())
+    -- nades and knife fix
+    local msg = formatHitMessage(victim:GetName(), _damage, Hit_Groups[1], _health) 
+
+    local r, g, b, a = hitColor:GetValue()
+    AddToNotify({r=r,g=g,b=b,a=a}, msg, notifyConsole:GetValue())
 end
 
 Event_Table["round_prestart"] = function(player_death)
     ClearCache()
-    Cache.target = nil
-    Cache.last_target = nil
 end
 
 local function handleEvents(event)
@@ -244,37 +247,38 @@ local function CompileShot(predicted_shot)
     if IsGrenade(Cache.weapon_name) then return end
 
     local shot_type = Cache.mouse_pressed and "manual" or "aimbot"
+    local spread_amt = CalculateSpread(predicted_shot.ang, predicted_shot.pos, Cache.bullet_impact[#Cache.bullet_impact])
 
-    -- AimbotTarget is fucked so we have to do this!
-    local choose_last_target = (Cache.target_changed and Cache.last_target) or _target == nil
-    local _target = choose_last_target and Cache.last_target or Cache.target
+    if not predicted_shot.target and #Cache.player_hurt > 0 then
+        predicted_shot.target = entities.GetByIndex( Cache.player_hurt[1].index )
+    end
 
-    Cache.target_changed = false
-    
     local shot = {
         type = shot_type,
-        target = _target,
+        target = predicted_shot.target,
         weapon = Cache.weapon_name,
-        ang = predicted_shot[1],
-        pos = predicted_shot[2],
+        ang = predicted_shot.ang,
+        pos = predicted_shot.pos,
         impacts = Cache.bullet_impact,
         hurts = Cache.player_hurt,
         tick = globals.TickCount(),
-        spread = CalculateSpread(predicted_shot[1], predicted_shot[2], Cache.bullet_impact[#Cache.bullet_impact])
+        spread = string.format("%.3f", spread_amt)
     }
-
-    DisplayShot(shot)
+    
+    return shot
 end
 
 local function HandleViewAngles(cmd)
+    Cache.mouse_pressed = input.IsButtonDown( 1 )
+
     local ping_in_seconds = entities.GetPlayerResources():GetPropInt("m_iPing", local_player:GetIndex()) / 1000
     local ping_in_ticks = math.ceil(ping_in_seconds / globals.TickInterval())
-    local longest_lifetime = sv_maxusrcmdprocessticks:GetValue() + ping_in_ticks + 1
+    local longest_lifetime = sv_maxusrcmdprocessticks:GetValue() + (ping_in_ticks * 2)
 
     -- remove old angles
     local i = 1 
     while i <= 2 do
-        if Cache.view_angles[i] and globals.TickCount() - Cache.view_angles[i][3] > longest_lifetime then
+        if Cache.view_angles[i] and globals.TickCount() - Cache.view_angles[i].tick >= longest_lifetime then
             Cache.view_angles[i] = nil
         end
 
@@ -295,50 +299,49 @@ local function HandleViewAngles(cmd)
         -- actually works very well
         -- gets first and very last IN_ATTACK tick
         if Cache.view_angles[1] == nil then
-            Cache.view_angles[1] = {shot_angle, shot_pos, globals.TickCount()}
+            Cache.view_angles[1] = {ang = shot_angle, pos = shot_pos, tick = globals.TickCount(), target = Cache.current_target}
         else
-            Cache.view_angles[2] = {shot_angle, shot_pos, globals.TickCount()}
+            Cache.view_angles[2] = {ang = shot_angle, pos = shot_pos, tick = globals.TickCount(), target = Cache.current_target}
         end
     end
 end
 --[[
-    Frame Base
+    Shot stuff
 ]]
-local function DrawHook()
+callbacks.Register("Draw", function()
     -- match angles to shots
     if Cache.weapon_name ~= "" then
         -- basic logic for deciding which angle to choose
-        local shot = Cache.view_angles[1]
+        local shot_data = Cache.view_angles[1]
         Cache.view_angles[1] = nil
 
-        if shot == nil then
-            shot = Cache.view_angles[2]
+        if shot_data == nil then
+            shot_data = Cache.view_angles[2]
             Cache.view_angles[2] = nil
         end
 
         -- the actual function of the script
-        if shot then
-            CompileShot(shot)
-
+        if shot_data then
+            local shot = CompileShot(shot_data)
+            
+            if shot then
+                DisplayShot(shot)
+            end
             -- clear cache shit
             ClearCache()
         end
     end
-end
+end)
 
 --[[
     Target Stuff (BUGGY AS FUCK)
 ]]
 local function UpdateTarget(entity)
-    Cache.last_target = Cache.target
-    Cache.target_changed = true
-    
     if entity:GetName() then
-        Cache.target = entity
-        return
+        Cache.current_target = entity
+    else
+        Cache.current_target = nil
     end
-
-    Cache.target = nil
 end
 --[[
     Boring Shit
@@ -347,8 +350,6 @@ callbacks.Register( "CreateMove", HandleViewAngles)
 
 callbacks.Register( "AimbotTarget", UpdateTarget)
 
-callbacks.Register( "Draw", DrawHook )
-callbacks.Register( "Draw", DrawShots)
 callbacks.Register( "Draw", UpdateNotify)
 callbacks.Register( "Draw", DrawNotify)
 
@@ -357,5 +358,3 @@ callbacks.Register( "FireGameEvent", handleEvents)
 for k, v in pairs(Event_Table) do
     client.AllowListener(k)
 end
-
-gui.Command("clear")
