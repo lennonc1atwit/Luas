@@ -30,6 +30,9 @@ function PushNotifySettings(_time, _fontName, _fontSize, fontWeight)
     fontName = _fontName;
     fontSize = _fontSize;
     fontweight = _fontWeight;
+
+    local drawFont = draw.CreateFont(fontName, fontSize, 550);
+    draw.SetFont(drawFont);
 end
 
 -- I dont really need a function for this tbh but its here
@@ -58,9 +61,6 @@ end
 
 -- Drawing animation magic ripped straight from leaked source code :)
 function DrawNotify()
-    local drawFont = draw.CreateFont(fontName, fontSize, 550);
-    draw.SetFont(drawFont);
-
     -- Log base offsets
     local x = xOffset;
 	local y = yOffset;
