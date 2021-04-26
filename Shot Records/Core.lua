@@ -64,13 +64,16 @@ local logSettingsGroup = gui.Groupbox( ref, "Settings", 16, 16, 296)
 local logFontGroup = gui.Groupbox( ref, "Font Settings", 32 + 296, 16, 296)
     local fontSize = gui.Slider( logFontGroup, "logs.font.size", "Font size", 14, 10, 24)
     local fontName = gui.Editbox( logFontGroup, "logs.font.name", "Font Name" )
+    local w, h = draw.GetScreenSize()
+    local xPos = gui.Slider( logFontGroup, "logs.y", "X position", 8, 0, w )
+    local yPos = gui.Slider( logFontGroup, "logs.x", "Y position", 5, 0, h )
 
 fontName:SetValue("tomah")
 hitHeader:SetValue("[HURT] ")
 missHeader:SetValue("[MISS] ")
 
-local applySettings = gui.Button(logFontGroup, "Apply Font Settings", function()
-    PushNotifySettings(notifiyDuration:GetValue(), fontName:GetValue(), fontSize:GetValue())
+local applySettings = gui.Button(logFontGroup, "Apply Settings", function()
+    PushNotifySettings(notifiyDuration:GetValue(), fontName:GetValue(), fontSize:GetValue(), 501, xPos:GetValue(), yPos:GetValue())
     AddToNotify({r = 255, g = 255, b = 255, a = 255}, "Font Settings Updated", false)
 end )
 --[[
