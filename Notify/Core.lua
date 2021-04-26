@@ -24,7 +24,7 @@ local function DrawTextShadow(x, y, string, r, g, b, a)
     draw.Text(x, y, string);
 end
 
-function PushNotifySettings(_time, _fontName, _fontSize, fontWeight)
+function PushNotifySettings(_time, _fontName, _fontSize, _fontWeight, x, y)
     notifyTime = _time;
 
     fontName = _fontName;
@@ -33,6 +33,14 @@ function PushNotifySettings(_time, _fontName, _fontSize, fontWeight)
 
     local drawFont = draw.CreateFont(fontName, fontSize, 550);
     draw.SetFont(drawFont);
+	
+	if x then
+		xOffset = x
+	end
+	
+	if y then
+		yOffset = y
+	end
 end
 
 -- I dont really need a function for this tbh but its here
