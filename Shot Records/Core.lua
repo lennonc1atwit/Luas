@@ -24,13 +24,13 @@ file.Enumerate(function(filename)
 end)
 
 if not installed then
-    file.Write("Libraries/Notify.txt", http.Get("https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Notify/Core.lua"));
+    file.Write("Libraries/Scape_Notify.txt", http.Get("https://raw.githubusercontent.com/lennonc1atwit/Luas/master/Notify/Core.lua"));
 end
 
-local res = file.Open("Libraries/Notify.txt", "r") 
+local res = file.Open("Libraries/Scape_Notify.txt", "r") 
 local buf = res:Read()
 res:Close()
-load(buf, "Libraries/Notify")()
+load(buf, "Libraries/Scape_Notify")()
   
 --[[
     Gui Fun
