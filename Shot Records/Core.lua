@@ -18,7 +18,7 @@ end
 -- making sure you have notify stuff and loading it
 local installed = false
 file.Enumerate(function(filename)
-    if filename == "Libraries/Notify.txt" then
+    if filename == "Libraries/Scape_Notify.txt" then
         installed = true;
     end;
 end)
